@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { NODE_TYPE_COLORS } from '../constants';
+import { NODE_TYPE_COLORS, NODE_WIDTH } from '../constants';
 
 export const CustomNode: React.FC<NodeProps> = memo(({ data }) => {
   const isHorizontal = data.layoutDirection === 'LR' || data.layoutDirection === 'RL';
@@ -11,7 +11,10 @@ export const CustomNode: React.FC<NodeProps> = memo(({ data }) => {
   return (
     <>
       <Handle type="target" position={targetPosition} className="!bg-gray-500" />
-      <div className={`px-4 py-2 shadow-md rounded-md border-2 text-white ${colorClass}`}>
+      <div
+        className={`px-4 py-2 shadow-md rounded-md border-2 text-white ${colorClass} whitespace-normal break-words`}
+        style={{ width: `${NODE_WIDTH}px` }}
+      >
         <div className="flex flex-col">
           <div className="text-xs font-bold capitalize text-gray-300">{data.type}</div>
           <div className="text-sm font-medium mt-1">{data.label}</div>

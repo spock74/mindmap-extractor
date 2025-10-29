@@ -1,5 +1,4 @@
 export const NODE_WIDTH = 200;
-export const NODE_HEIGHT = 60;
 
 export const NODE_TYPE_COLORS: { [key: string]: string } = {
   drug: 'bg-blue-600 border-blue-400',
