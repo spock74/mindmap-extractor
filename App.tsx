@@ -93,6 +93,12 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
+  
+  // State for Filtering
+  const [labelFilter, setLabelFilter] = useState<string>('');
+  const [typeFilters, setTypeFilters] = useState<Set<string>>(new Set());
+  const allNodeTypes = useMemo(() => Object.keys(NODE_TYPE_COLORS), []);
+
 
   // State for Generation tab
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -178,37 +184,67 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
   
 
   useEffect(() => {
-    if (graphElements) {
-      setLoadingMessage('Calculating layout...');
-      const direction = layout.startsWith('LR') ? 'LR' : layout.startsWith('RL') ? 'RL' : layout.startsWith('BT') ? 'BT' : 'TB';
-      
-      const copiedNodes = JSON.parse(JSON.stringify(graphElements.nodes));
-      const copiedEdges = JSON.parse(JSON.stringify(graphElements.edges));
-      
-      const nodesWithLayoutData = copiedNodes.map((node: Node) => ({
-        ...node,
-        data: { ...node.data, layoutDirection: direction }
-      }));
-      
-      const edgesWithUpdatedType = copiedEdges.map((edge: Edge) => ({
-        ...edge,
-        type: layout === 'LR_CURVED' ? 'default' : 'smoothstep',
-      }));
-
-      const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-        nodesWithLayoutData,
-        edgesWithUpdatedType,
-        direction
-      );
-      setNodes(layoutedNodes);
-      setEdges(layoutedEdges);
-      setIsLoading(false);
-      setLoadingMessage('');
-    } else {
+    if (!graphElements) {
       setNodes([]);
       setEdges([]);
+      return;
     }
-  }, [graphElements, layout, setNodes, setEdges]);
+    
+    setIsLoading(true);
+    setLoadingMessage('Applying filters and layout...');
+
+    // 1. Filtering
+    const hasActiveFilters = labelFilter.trim() !== '' || typeFilters.size > 0;
+
+    const filteredNodesSource = hasActiveFilters
+      ? graphElements.nodes.filter(node => {
+          const labelMatch = labelFilter.trim() === '' || node.data.label.toLowerCase().includes(labelFilter.trim().toLowerCase());
+          const typeMatch = typeFilters.size === 0 || typeFilters.has(node.data.type);
+          return labelMatch && typeMatch;
+        })
+      : graphElements.nodes;
+
+    const visibleNodeIds = new Set(filteredNodesSource.map(n => n.id));
+
+    const filteredEdgesSource = hasActiveFilters
+      ? graphElements.edges.filter(edge => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target))
+      : graphElements.edges;
+
+    if (filteredNodesSource.length === 0 && hasActiveFilters) {
+        setNodes([]);
+        setEdges([]);
+        setIsLoading(false);
+        setLoadingMessage('');
+        return;
+    }
+
+    // 2. Layouting (using the filtered elements)
+    const direction = layout.startsWith('LR') ? 'LR' : layout.startsWith('RL') ? 'RL' : layout.startsWith('BT') ? 'BT' : 'TB';
+      
+    const copiedNodes = JSON.parse(JSON.stringify(filteredNodesSource));
+    const copiedEdges = JSON.parse(JSON.stringify(filteredEdgesSource));
+      
+    const nodesWithLayoutData = copiedNodes.map((node: Node) => ({
+      ...node,
+      data: { ...node.data, layoutDirection: direction }
+    }));
+      
+    const edgesWithUpdatedType = copiedEdges.map((edge: Edge) => ({
+      ...edge,
+      type: layout === 'LR_CURVED' ? 'default' : 'smoothstep',
+    }));
+
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      nodesWithLayoutData,
+      edgesWithUpdatedType,
+      direction
+    );
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
+    setIsLoading(false);
+    setLoadingMessage('');
+
+  }, [graphElements, layout, labelFilter, typeFilters, setNodes, setEdges]);
 
 
   // --- Data Processing Callbacks ---
@@ -257,6 +293,9 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
       });
       
       const initialNodes = Array.from(nodeMap.values());
+      // Reset filters when new data is loaded
+      setLabelFilter('');
+      setTypeFilters(new Set());
       setGraphElements({ nodes: initialNodes, edges: initialEdges });
       return true;
     } catch (e) {
@@ -340,6 +379,23 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
     setHistory(prev => prev.filter(item => item.id !== id));
   }, []);
   
+    const handleTypeFilterChange = useCallback((type: string) => {
+    setTypeFilters(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(type)) {
+            newSet.delete(type);
+        } else {
+            newSet.add(type);
+        }
+        return newSet;
+    });
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+      setLabelFilter('');
+      setTypeFilters(new Set());
+  }, []);
+
   const reactFlowInstance = useMemo(() => (
     <ReactFlow
       nodes={nodes}
@@ -360,128 +416,162 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
 
   return (
     <div className="flex flex-col md:flex-row h-screen font-sans text-white bg-gray-900">
-      <div className="w-full md:w-1/3 lg:w-1/4 p-4 flex flex-col bg-gray-900 border-r border-gray-700 shadow-lg overflow-y-auto">
-        <header className="mb-4">
+      <div className="w-full md:w-1/3 lg:w-1/4 p-4 flex flex-col bg-gray-900 border-r border-gray-700 shadow-lg">
+        <header className="mb-4 flex-shrink-0">
           <h1 className="text-2xl font-bold text-cyan-400">JSON to Mind Map</h1>
           <p className="text-sm text-gray-400">Visualize knowledge graphs from JSON or text documents using Gemini.</p>
         </header>
         
-        <div className="flex border-b border-gray-700 mb-4">
-            { (['generate', 'manual', 'history'] as const).map(tab => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={`capitalize text-sm font-medium py-2 px-4 border-b-2 transition-colors duration-200 ${activeTab === tab ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-gray-400 hover:text-white'}`}>
-                    {tab}
-                </button>
-            ))}
-        </div>
-
-        <div className="flex-grow flex flex-col min-h-0">
-          {activeTab === 'generate' && (
-             <div className="flex flex-col gap-4 flex-grow">
-                <div>
-                  <label htmlFor="model-select" className="text-sm font-medium text-gray-300 mb-2 block">
-                    Model
-                  </label>
-                  <select
-                    id="model-select"
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200"
-                  >
-                    {GEMINI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
-              
-                <div>
-                    <label htmlFor="file-upload" className="text-sm font-medium text-gray-300 mb-2 block">
-                        Upload Document (.pdf, .txt, .md)
-                    </label>
-                    <input type="file" id="file-upload" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} accept=".pdf,.txt,.md" className="hidden"/>
-                    <button onClick={() => fileInputRef.current?.click()} className="w-full text-sm p-3 bg-gray-800 border border-dashed border-gray-600 rounded-md text-gray-400 hover:bg-gray-700 hover:border-cyan-500 transition duration-200">
-                        {selectedFile ? `Selected: ${selectedFile.name}` : 'Click to select a file'}
-                    </button>
-                </div>
-                <div className="flex flex-col flex-grow">
-                    <label htmlFor="prompt-input" className="text-sm font-medium text-gray-300 mb-2">
-                        Prompt
-                    </label>
-                    <textarea id="prompt-input" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder="Enter your prompt here..." />
-                </div>
-                
-                {isLoading ? (
-                  <button onClick={handleStopGenerating} className="mt-auto w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
-                    Stop Generating
-                  </button>
-                ) : (
-                  <button onClick={handleFileGenerate} disabled={!selectedFile} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                    Generate with AI
-                  </button>
-                )}
-            </div>
-          )}
-
-          {activeTab === 'manual' && (
-            <div className="flex flex-col gap-4 flex-grow">
-                <div className="flex-grow flex flex-col">
-                    <label htmlFor="json-input" className="text-sm font-medium text-gray-300 mb-2">
-                        Paste your JSON here:
-                    </label>
-                    <textarea id="json-input" value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder="Enter JSON data..." />
-                </div>
-                <button onClick={() => processJsonAndSetGraph(jsonInput)} disabled={isLoading} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                    Generate Graph
-                </button>
-            </div>
-          )}
-            
-          {activeTab === 'history' && (
-             <div className="flex flex-col gap-2 flex-grow overflow-y-auto">
-                {history.length === 0 ? (
-                    <p className="text-gray-500 text-sm text-center mt-4">No history yet. Generate a graph from a document to see it here.</p>
-                ) : (
-                    history.map(item => (
-                        <div key={item.id} className="bg-gray-800 p-3 rounded-md border border-gray-700 text-xs">
-                            <div className="font-bold text-gray-300 truncate">{item.filename}</div>
-                            <p className="text-gray-400 mt-1 italic truncate">"{item.prompt}"</p>
-                            <div className="text-gray-500 text-[10px] mt-2">{new Date(item.timestamp).toLocaleString()}</div>
-                            <div className="flex gap-2 mt-2">
-                                <button onClick={() => handleSelectHistoryItem(item)} className="flex-1 bg-cyan-700 hover:bg-cyan-600 text-white text-xs py-1 px-2 rounded">Load</button>
-                                <button onClick={() => handleDeleteHistoryItem(item.id)} className="bg-red-800 hover:bg-red-700 text-white text-xs py-1 px-2 rounded">Delete</button>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-          )}
-        </div>
-
-        {error && <div className="mt-4 p-3 bg-red-800 border border-red-600 text-red-200 rounded-md text-sm whitespace-pre-wrap">{error}</div>}
-
-        {isLoading && (
-            <div className="mt-4 w-full text-white py-2 px-4 rounded-md flex items-center justify-center">
-                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                 </svg>
-                 <span className="text-sm">{loadingMessage || 'Loading...'}</span>
-            </div>
-        )}
-        
-        <div className="mt-6 pt-4 border-t border-gray-700">
-            <h2 className="text-sm font-medium text-gray-300 mb-3">Layout Direction</h2>
-            <div className="grid grid-cols-2 gap-2">
-                {(Object.keys(LAYOUTS) as Array<keyof typeof LAYOUTS>).map((dir) => (
-                    <button
-                        key={dir}
-                        onClick={() => setLayout(dir)}
-                        className={`py-2 px-3 text-xs font-semibold rounded-md transition-colors duration-200 ${ layout === dir ? 'bg-cyan-500 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300' }`}
-                    >
-                        {LAYOUTS[dir]}
+        <div className="flex-grow min-h-0 overflow-y-auto pr-2 -mr-2">
+            <div className="flex border-b border-gray-700 mb-4 sticky top-0 bg-gray-900">
+                { (['generate', 'manual', 'history'] as const).map(tab => (
+                    <button key={tab} onClick={() => setActiveTab(tab)} className={`capitalize text-sm font-medium py-2 px-4 border-b-2 transition-colors duration-200 ${activeTab === tab ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-gray-400 hover:text-white'}`}>
+                        {tab}
                     </button>
                 ))}
             </div>
+
+            <div className="flex-grow flex flex-col min-h-0">
+              {activeTab === 'generate' && (
+                 <div className="flex flex-col gap-4 flex-grow">
+                    <div>
+                      <label htmlFor="model-select" className="text-sm font-medium text-gray-300 mb-2 block">
+                        Model
+                      </label>
+                      <select
+                        id="model-select"
+                        value={model}
+                        onChange={(e) => setModel(e.target.value)}
+                        className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200"
+                      >
+                        {GEMINI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+                  
+                    <div>
+                        <label htmlFor="file-upload" className="text-sm font-medium text-gray-300 mb-2 block">
+                            Upload Document (.pdf, .txt, .md)
+                        </label>
+                        <input type="file" id="file-upload" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} accept=".pdf,.txt,.md" className="hidden"/>
+                        <button onClick={() => fileInputRef.current?.click()} className="w-full text-sm p-3 bg-gray-800 border border-dashed border-gray-600 rounded-md text-gray-400 hover:bg-gray-700 hover:border-cyan-500 transition duration-200">
+                            {selectedFile ? `Selected: ${selectedFile.name}` : 'Click to select a file'}
+                        </button>
+                    </div>
+                    <div className="flex flex-col flex-grow">
+                        <label htmlFor="prompt-input" className="text-sm font-medium text-gray-300 mb-2">
+                            Prompt
+                        </label>
+                        <textarea id="prompt-input" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder="Enter your prompt here..." />
+                    </div>
+                    
+                    {isLoading ? (
+                      <button onClick={handleStopGenerating} className="mt-auto w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                        Stop Generating
+                      </button>
+                    ) : (
+                      <button onClick={handleFileGenerate} disabled={!selectedFile} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                        Generate with AI
+                      </button>
+                    )}
+                </div>
+              )}
+
+              {activeTab === 'manual' && (
+                <div className="flex flex-col gap-4 flex-grow">
+                    <div className="flex-grow flex flex-col">
+                        <label htmlFor="json-input" className="text-sm font-medium text-gray-300 mb-2">
+                            Paste your JSON here:
+                        </label>
+                        <textarea id="json-input" value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder="Enter JSON data..." />
+                    </div>
+                    <button onClick={() => processJsonAndSetGraph(jsonInput)} disabled={isLoading} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                        Generate Graph
+                    </button>
+                </div>
+              )}
+                
+              {activeTab === 'history' && (
+                 <div className="flex flex-col gap-2 flex-grow">
+                    {history.length === 0 ? (
+                        <p className="text-gray-500 text-sm text-center mt-4">No history yet. Generate a graph from a document to see it here.</p>
+                    ) : (
+                        history.map(item => (
+                            <div key={item.id} className="bg-gray-800 p-3 rounded-md border border-gray-700 text-xs">
+                                <div className="font-bold text-gray-300 truncate">{item.filename}</div>
+                                <p className="text-gray-400 mt-1 italic truncate">"{item.prompt}"</p>
+                                <div className="text-gray-500 text-[10px] mt-2">{new Date(item.timestamp).toLocaleString()}</div>
+                                <div className="flex gap-2 mt-2">
+                                    <button onClick={() => handleSelectHistoryItem(item)} className="flex-1 bg-cyan-700 hover:bg-cyan-600 text-white text-xs py-1 px-2 rounded">Load</button>
+                                    <button onClick={() => handleDeleteHistoryItem(item.id)} className="bg-red-800 hover:bg-red-700 text-white text-xs py-1 px-2 rounded">Delete</button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+              )}
+            </div>
+
+            {error && <div className="mt-4 p-3 bg-red-800 border border-red-600 text-red-200 rounded-md text-sm whitespace-pre-wrap">{error}</div>}
+
+            {isLoading && (
+                <div className="mt-4 w-full text-white py-2 px-4 rounded-md flex items-center justify-center">
+                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                     </svg>
+                     <span className="text-sm">{loadingMessage || 'Loading...'}</span>
+                </div>
+            )}
+            
+            <div className="mt-6 pt-4 border-t border-gray-700">
+                <h2 className="text-sm font-medium text-gray-300 mb-3">Layout Direction</h2>
+                <div className="grid grid-cols-2 gap-2">
+                    {(Object.keys(LAYOUTS) as Array<keyof typeof LAYOUTS>).map((dir) => (
+                        <button
+                            key={dir}
+                            onClick={() => setLayout(dir)}
+                            className={`py-2 px-3 text-xs font-semibold rounded-md transition-colors duration-200 ${ layout === dir ? 'bg-cyan-500 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300' }`}
+                        >
+                            {LAYOUTS[dir]}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            
+            <div className="mt-6 pt-4 border-t border-gray-700">
+                <h2 className="text-sm font-medium text-gray-300 mb-3">Filters</h2>
+                <div className="flex flex-col gap-4">
+                    <input
+                        type="text"
+                        placeholder="Filter by label..."
+                        value={labelFilter}
+                        onChange={e => setLabelFilter(e.target.value)}
+                        className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors"
+                    />
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                        {allNodeTypes.map(type => (
+                            <label key={type} className="flex items-center gap-2 text-gray-300 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={typeFilters.has(type)}
+                                    onChange={() => handleTypeFilterChange(type)}
+                                    className="form-checkbox h-4 w-4 bg-gray-700 border-gray-600 rounded text-cyan-500 focus:ring-cyan-600 transition-colors"
+                                />
+                                <span className="capitalize">{type}</span>
+                            </label>
+                        ))}
+                    </div>
+                    <button
+                        onClick={handleClearFilters}
+                        className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
+                    >
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
         </div>
       </div>
-      <main className="w-full md:w-2/3 lg:w-3/4 h-full">
+      <main className="w-full md:w-2/3 lg:w-3/4 flex-grow min-h-0">
         {reactFlowInstance}
       </main>
     </div>
