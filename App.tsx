@@ -12,7 +12,8 @@ import ReactFlow, {
   MarkerType,
 } from 'reactflow';
 import * as pdfjsLib from 'pdfjs-dist';
-import zod from 'zod';
+// Fix: Use named import for ZodError.
+import { ZodError } from 'zod';
 
 import { getLayoutedElements } from './utils/layout';
 import { JsonDataSchema } from './utils/schema';
@@ -260,7 +261,8 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
       return true;
     } catch (e) {
       let errorMessage = 'An unknown error occurred.';
-      if (e instanceof zod.ZodError) {
+      // Fix: Use ZodError directly as it's now a named import.
+      if (e instanceof ZodError) {
         const formattedErrors = e.issues.map(err => `At '${err.path.join('.')}': ${err.message}`).join('\n');
         errorMessage = `JSON validation failed:\n${formattedErrors}`;
       } else if (e instanceof SyntaxError) {

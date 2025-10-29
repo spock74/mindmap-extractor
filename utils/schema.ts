@@ -1,7 +1,6 @@
-import zod from 'zod';
+// Fix: Use a named import for `z` from `zod` as the library exports it this way.
+import { z } from 'zod';
 import { NODE_TYPE_COLORS } from '../constants';
-
-const { z } = zod;
 
 // Extract valid node types from the constants to be used in the enum.
 const validNodeTypes = Object.keys(NODE_TYPE_COLORS) as [string, ...string[]];

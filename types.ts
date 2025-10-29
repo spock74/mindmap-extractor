@@ -1,4 +1,5 @@
 
+
 export interface S_O_Node {
   label: string;
   type: string;
@@ -7,7 +8,10 @@ export interface S_O_Node {
 export interface Triplet {
   s: S_O_Node;
   p: string;
-  o: S_O_Node | null;
+  // Fix: Made 'o' optional to resolve a TypeScript error. The compiler
+  // indicated that the type inferred from the Zod schema treated 'o' as
+  // optional, while this interface required it, causing a mismatch.
+  o?: S_O_Node | null;
 }
 
 export interface JsonData {
