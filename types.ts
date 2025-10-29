@@ -13,3 +13,11 @@ export interface Triplet {
 export interface JsonData {
   triplets: Triplet[];
 }
+
+export interface HistoryItem {
+  id: string;
+  filename: string;
+  prompt: string;
+  jsonString: string;
+  timestamp: string;
+}

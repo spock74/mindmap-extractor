@@ -87,3 +87,7 @@ export const DEFAULT_JSON_DATA = `{
     }
   ]
 }`;
+
+export const DEFAULT_GEMINI_PROMPT = `Extract all key entities and their relationships from the document to build a comprehensive knowledge graph. Focus on treatments, populations, and key findings.`;
+
+export const GEMINI_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash'];
