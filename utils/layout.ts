@@ -7,7 +7,7 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], rankdir: strin
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   
   // Configure the layout direction and spacing
-  dagreGraph.setGraph({ rankdir, nodesep: 100, ranksep: 120 });
+  dagreGraph.setGraph({ rankdir, nodesep: 120, ranksep: 180 });
 
   nodes.forEach((node) => {
     dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
