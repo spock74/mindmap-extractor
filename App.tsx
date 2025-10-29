@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -18,8 +19,9 @@ import { ZodError } from 'zod';
 import { getLayoutedElements } from './utils/layout';
 import { JsonDataSchema } from './utils/schema';
 import { JsonData, Triplet, HistoryItem } from './types';
-import { DEFAULT_JSON_DATA, DEFAULT_GEMINI_PROMPT, GEMINI_MODELS, NODE_TYPE_COLORS } from './constants';
+import { DEFAULT_JSON_DATA, GEMINI_MODELS, NODE_TYPE_COLORS, LAYOUTS } from './constants';
 import { CustomNode } from './components/CustomNode';
+import { useI18n } from './i18n';
 
 // --- PDF Worker Setup ---
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdfjs-dist/build/pdf.worker.min.mjs';
@@ -67,18 +69,10 @@ const nodeTypes = {
   custom: CustomNode,
 };
 
-const LAYOUTS = {
-  TB: 'Top to Bottom',
-  BT: 'Bottom to Top',
-  LR: 'Left to Right',
-  RL: 'Right to Left',
-  LR_CURVED: 'Left to Right (Curved)',
-};
-
-
 // --- Main App Component ---
 
 function App() {
+  const { t, language, setLanguage } = useI18n();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [layout, setLayout] = useState<string>('TB');
@@ -103,9 +97,14 @@ function App() {
   // State for Generation tab
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [prompt, setPrompt] = useState<string>(DEFAULT_GEMINI_PROMPT);
+  const [prompt, setPrompt] = useState<string>(t('defaultGeminiPrompt'));
   const [model, setModel] = useState<string>(GEMINI_MODELS[1]); // Default to flash
   const generationCancelledRef = useRef<boolean>(false);
+  
+  // Update prompt when language changes
+  useEffect(() => {
+    setPrompt(t('defaultGeminiPrompt'));
+  }, [language, t]);
 
   // --- Gemini API Call ---
   const generateJsonFromText = useCallback(async (content: string, userPrompt: string, selectedModel: string): Promise<string> => {
@@ -191,7 +190,7 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
     }
     
     setIsLoading(true);
-    setLoadingMessage('Applying filters and layout...');
+    setLoadingMessage('loadingMessageApplyingFilters');
 
     // 1. Filtering
     const hasActiveFilters = labelFilter.trim() !== '' || typeFilters.size > 0;
@@ -303,9 +302,9 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
       // Fix: Use ZodError directly as it's now a named import.
       if (e instanceof ZodError) {
         const formattedErrors = e.issues.map(err => `At '${err.path.join('.')}': ${err.message}`).join('\n');
-        errorMessage = `JSON validation failed:\n${formattedErrors}`;
+        errorMessage = t('errorJsonValidation', { errors: formattedErrors });
       } else if (e instanceof SyntaxError) {
-        errorMessage = `Invalid JSON: ${e.message}`;
+        errorMessage = t('errorInvalidJson', { error: e.message });
       } else if (e instanceof Error) {
         errorMessage = e.message;
       }
@@ -314,7 +313,7 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
       setLoadingMessage('');
       return false;
     }
-  }, []);
+  }, [t]);
   
 
   // --- Event Handlers ---
@@ -327,17 +326,17 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
     generationCancelledRef.current = false;
 
     try {
-      setLoadingMessage("Reading file content...");
+      setLoadingMessage("loadingMessageReadingFile");
       const fileContent = await readFileContent(selectedFile);
       
       if (generationCancelledRef.current) return;
       
-      setLoadingMessage("Generating graph with Gemini AI...");
+      setLoadingMessage("loadingMessageGenerating");
       const jsonString = await generateJsonFromText(fileContent, prompt, model);
       
       if (generationCancelledRef.current) return;
       
-      setLoadingMessage("Processing graph data...");
+      setLoadingMessage("loadingMessageProcessing");
       const success = processJsonAndSetGraph(jsonString);
 
       if (success) {
@@ -349,13 +348,14 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
           timestamp: new Date().toISOString(),
         };
         setHistory(prev => [newHistoryItem, ...prev]);
+        setJsonInput(jsonString);
       }
     } catch (e) {
       if (generationCancelledRef.current) {
-        setError("Generation cancelled by user.");
+        setError(t('errorGenerationCancelled'));
       } else {
         const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-        setError(`Generation failed: ${errorMessage}`);
+        setError(t('errorGenerationFailed', { error: errorMessage }));
       }
       setIsLoading(false);
       setLoadingMessage('');
@@ -366,7 +366,7 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
     generationCancelledRef.current = true;
     setIsLoading(false);
     setLoadingMessage('');
-    setError("Generation cancelled by user.");
+    setError(t('errorGenerationCancelled'));
   };
 
   const handleSelectHistoryItem = useCallback((item: HistoryItem) => {
@@ -418,15 +418,29 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
     <div className="flex flex-col md:flex-row h-screen font-sans text-white bg-gray-900">
       <div className="w-full md:w-1/3 lg:w-1/4 p-4 flex flex-col bg-gray-900 border-r border-gray-700 shadow-lg">
         <header className="mb-4 flex-shrink-0">
-          <h1 className="text-2xl font-bold text-cyan-400">JSON to Mind Map</h1>
-          <p className="text-sm text-gray-400">Visualize knowledge graphs from JSON or text documents using Gemini.</p>
+          <h1 className="text-2xl font-bold text-cyan-400">{t('appTitle')}</h1>
+          <p className="text-sm text-gray-400">{t('appDescription')}</p>
+          <div className="mt-4">
+              <label htmlFor="language-select" className="text-sm font-medium text-gray-300 mr-2">
+                  {t('languageLabel')}:
+              </label>
+              <select
+                  id="language-select"
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value as 'pt' | 'en')}
+                  className="p-1 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200"
+              >
+                  <option value="pt">Português (Brasil)</option>
+                  <option value="en">English</option>
+              </select>
+          </div>
         </header>
         
         <div className="flex-grow min-h-0 overflow-y-auto pr-2 -mr-2">
             <div className="flex border-b border-gray-700 mb-4 sticky top-0 bg-gray-900">
                 { (['generate', 'manual', 'history'] as const).map(tab => (
                     <button key={tab} onClick={() => setActiveTab(tab)} className={`capitalize text-sm font-medium py-2 px-4 border-b-2 transition-colors duration-200 ${activeTab === tab ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-gray-400 hover:text-white'}`}>
-                        {tab}
+                        {t(`${tab}Tab`)}
                     </button>
                 ))}
             </div>
@@ -436,7 +450,7 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
                  <div className="flex flex-col gap-4 flex-grow">
                     <div>
                       <label htmlFor="model-select" className="text-sm font-medium text-gray-300 mb-2 block">
-                        Model
+                        {t('modelLabel')}
                       </label>
                       <select
                         id="model-select"
@@ -450,27 +464,27 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
                   
                     <div>
                         <label htmlFor="file-upload" className="text-sm font-medium text-gray-300 mb-2 block">
-                            Upload Document (.pdf, .txt, .md)
+                            {t('uploadLabel')}
                         </label>
                         <input type="file" id="file-upload" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} accept=".pdf,.txt,.md" className="hidden"/>
                         <button onClick={() => fileInputRef.current?.click()} className="w-full text-sm p-3 bg-gray-800 border border-dashed border-gray-600 rounded-md text-gray-400 hover:bg-gray-700 hover:border-cyan-500 transition duration-200">
-                            {selectedFile ? `Selected: ${selectedFile.name}` : 'Click to select a file'}
+                            {selectedFile ? t('selectedFile', { filename: selectedFile.name }) : t('selectFileButton')}
                         </button>
                     </div>
                     <div className="flex flex-col flex-grow">
                         <label htmlFor="prompt-input" className="text-sm font-medium text-gray-300 mb-2">
-                            Prompt
+                            {t('promptLabel')}
                         </label>
-                        <textarea id="prompt-input" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder="Enter your prompt here..." />
+                        <textarea id="prompt-input" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder={t('promptPlaceholder')} />
                     </div>
                     
                     {isLoading ? (
                       <button onClick={handleStopGenerating} className="mt-auto w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
-                        Stop Generating
+                        {t('stopGeneratingButton')}
                       </button>
                     ) : (
                       <button onClick={handleFileGenerate} disabled={!selectedFile} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                        Generate with AI
+                        {t('generateWithAIButton')}
                       </button>
                     )}
                 </div>
@@ -480,12 +494,12 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
                 <div className="flex flex-col gap-4 flex-grow">
                     <div className="flex-grow flex flex-col">
                         <label htmlFor="json-input" className="text-sm font-medium text-gray-300 mb-2">
-                            Paste your JSON here:
+                            {t('pasteJsonLabel')}
                         </label>
                         <textarea id="json-input" value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder="Enter JSON data..." />
                     </div>
                     <button onClick={() => processJsonAndSetGraph(jsonInput)} disabled={isLoading} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                        Generate Graph
+                        {t('generateGraphButton')}
                     </button>
                 </div>
               )}
@@ -493,7 +507,7 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
               {activeTab === 'history' && (
                  <div className="flex flex-col gap-2 flex-grow">
                     {history.length === 0 ? (
-                        <p className="text-gray-500 text-sm text-center mt-4">No history yet. Generate a graph from a document to see it here.</p>
+                        <p className="text-gray-500 text-sm text-center mt-4">{t('historyEmpty')}</p>
                     ) : (
                         history.map(item => (
                             <div key={item.id} className="bg-gray-800 p-3 rounded-md border border-gray-700 text-xs">
@@ -501,8 +515,8 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
                                 <p className="text-gray-400 mt-1 italic truncate">"{item.prompt}"</p>
                                 <div className="text-gray-500 text-[10px] mt-2">{new Date(item.timestamp).toLocaleString()}</div>
                                 <div className="flex gap-2 mt-2">
-                                    <button onClick={() => handleSelectHistoryItem(item)} className="flex-1 bg-cyan-700 hover:bg-cyan-600 text-white text-xs py-1 px-2 rounded">Load</button>
-                                    <button onClick={() => handleDeleteHistoryItem(item.id)} className="bg-red-800 hover:bg-red-700 text-white text-xs py-1 px-2 rounded">Delete</button>
+                                    <button onClick={() => handleSelectHistoryItem(item)} className="flex-1 bg-cyan-700 hover:bg-cyan-600 text-white text-xs py-1 px-2 rounded">{t('historyLoadButton')}</button>
+                                    <button onClick={() => handleDeleteHistoryItem(item.id)} className="bg-red-800 hover:bg-red-700 text-white text-xs py-1 px-2 rounded">{t('historyDeleteButton')}</button>
                                 </div>
                             </div>
                         ))
@@ -519,12 +533,12 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                      </svg>
-                     <span className="text-sm">{loadingMessage || 'Loading...'}</span>
+                     <span className="text-sm">{loadingMessage ? t(loadingMessage) : t('loadingDefault')}</span>
                 </div>
             )}
             
             <div className="mt-6 pt-4 border-t border-gray-700">
-                <h2 className="text-sm font-medium text-gray-300 mb-3">Layout Direction</h2>
+                <h2 className="text-sm font-medium text-gray-300 mb-3">{t('layoutDirectionTitle')}</h2>
                 <div className="grid grid-cols-2 gap-2">
                     {(Object.keys(LAYOUTS) as Array<keyof typeof LAYOUTS>).map((dir) => (
                         <button
@@ -532,18 +546,18 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
                             onClick={() => setLayout(dir)}
                             className={`py-2 px-3 text-xs font-semibold rounded-md transition-colors duration-200 ${ layout === dir ? 'bg-cyan-500 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300' }`}
                         >
-                            {LAYOUTS[dir]}
+                            {t(LAYOUTS[dir])}
                         </button>
                     ))}
                 </div>
             </div>
             
             <div className="mt-6 pt-4 border-t border-gray-700">
-                <h2 className="text-sm font-medium text-gray-300 mb-3">Filters</h2>
+                <h2 className="text-sm font-medium text-gray-300 mb-3">{t('filtersTitle')}</h2>
                 <div className="flex flex-col gap-4">
                     <input
                         type="text"
-                        placeholder="Filter by label..."
+                        placeholder={t('filterByLabelPlaceholder')}
                         value={labelFilter}
                         onChange={e => setLabelFilter(e.target.value)}
                         className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors"
@@ -565,7 +579,7 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
                         onClick={handleClearFilters}
                         className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
                     >
-                        Clear Filters
+                        {t('clearFiltersButton')}
                     </button>
                 </div>
             </div>
