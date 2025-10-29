@@ -1,8 +1,13 @@
 
 
+
 export interface S_O_Node {
   label: string;
-  type: string;
+  // Fix: Made 'type' optional to resolve a TypeScript error. The compiler
+  // indicated that the type inferred from the Zod schema treated 'type' as
+  // optional, while this interface required it, causing a mismatch. The
+  // application code already handles this by providing a default.
+  type?: string;
 }
 
 export interface Triplet {
