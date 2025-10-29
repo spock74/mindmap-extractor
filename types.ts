@@ -1,7 +1,4 @@
 
-
-
-
 export interface S_O_Node {
   label: string;
   // Fix: Made 'type' optional to resolve a TypeScript error. The compiler
@@ -42,9 +39,12 @@ export interface KnowledgeBaseConcept {
   k_nug: KnowledgeNugget[];
   p_misc: string[];
   b_lvl: string[];
-  c_cplx: 'Baixa' | 'Média' | 'Alta';
-  c_rel: 'Fundamental' | 'Importante' | 'Especializado';
-  k_stab: 'Estável' | 'Emergente';
+  // Fix: Made fields optional to match Zod's inferred type, which treats
+  // them as optional. This resolves a TypeScript error during assignment. The
+  // application code handles these optional values gracefully.
+  c_cplx?: 'Baixa' | 'Média' | 'Alta';
+  c_rel?: 'Fundamental' | 'Importante' | 'Especializado';
+  k_stab?: 'Estável' | 'Emergente';
   r_con: RelatedConcept[];
   m_prmpt: string[];
 }
@@ -60,4 +60,28 @@ export interface HistoryItem {
   prompt: string;
   jsonString: string;
   timestamp: string;
+}
+
+// New types for direct graph format from primary prompt
+export interface GraphNode {
+    id: string;
+    label: string;
+    type: string;
+}
+
+export interface GraphEdge {
+    id: string;
+    source: string;
+    target: string;
+    label?: string;
+}
+
+export interface GraphResult {
+    title: string;
+    nodes: GraphNode[];
+    edges: GraphEdge[];
+}
+
+export interface GraphJsonData {
+    result: GraphResult;
 }

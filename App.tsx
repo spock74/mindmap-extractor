@@ -14,8 +14,8 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { ZodError } from 'zod';
 
 import { getLayoutedElements } from './utils/layout';
-import { TripletJsonDataSchema, KnowledgeBaseJsonDataSchema } from './utils/schema';
-import { TripletJsonData, KnowledgeBaseJsonData, Triplet, HistoryItem, KnowledgeBaseConcept } from './types';
+import { TripletJsonDataSchema, KnowledgeBaseJsonDataSchema, GraphJsonDataSchema } from './utils/schema';
+import { TripletJsonData, KnowledgeBaseJsonData, Triplet, HistoryItem, KnowledgeBaseConcept, GraphJsonData } from './types';
 import { DEFAULT_JSON_DATA, GEMINI_MODELS, NODE_TYPE_COLORS, LAYOUTS } from './constants';
 import { CustomNode } from './components/CustomNode';
 import { useI18n } from './i18n';
@@ -144,29 +144,13 @@ function App() {
   }, [language, t]);
 
   // --- Gemini API Call ---
-  const generateJsonFromText = useCallback(async (content: string, userPrompt: string, selectedModel: string): Promise<string> => {
+  const generateJsonFromText = useCallback(async (finalPrompt: string, selectedModel: string): Promise<string> => {
     if (!process.env.API_KEY) {
         throw new Error("API key is missing. Please ensure it is set in your environment variables.");
     }
     
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    // The prompt is now more generic as the user can provide complex instructions
-    const finalPrompt = `
-Based on the user's request, analyze the following document and generate a valid JSON object.
-The structure of the JSON will be dictated by the user's request.
-Ensure the output is only the raw JSON, without any surrounding text, explanations, or markdown formatting.
-
-**User's Request:**
-${userPrompt}
-
-**Document Content:**
----
-${content}
----
-
-Now, generate the JSON object.`;
 
     const response = await ai.models.generateContent({
         model: selectedModel,
@@ -317,30 +301,62 @@ Now, generate the JSON object.`;
 
     return { nodes, edges };
   };
+
+  const processGraphData = (data: GraphJsonData): { nodes: Node[], edges: Edge[] } => {
+    const initialNodes: Node[] = data.result.nodes.map(node => ({
+        id: node.id,
+        type: 'custom',
+        data: { label: node.label, type: node.type || 'default' },
+        position: { x: 0, y: 0 },
+    }));
+
+    const initialEdges: Edge[] = data.result.edges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        label: edge.label,
+        type: 'smoothstep',
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#A0AEC0' },
+        style: { stroke: '#A0AEC0', strokeWidth: 2 },
+        labelStyle: { fill: '#E2E8F0', fontSize: 12 },
+        labelBgStyle: { fill: '#2D3748' },
+    }));
+
+    const edges = breakCycles(initialNodes, initialEdges);
+
+    return { nodes: initialNodes, edges };
+  };
     
   const processJsonAndSetGraph = useCallback((jsonString: string): string | null => {
     setError(null);
     setGraphElements(null);
     try {
       const parsedJson = JSON.parse(jsonString);
-      let dataToProcess: TripletJsonData;
+      let finalJsonToStore = jsonString;
       
-      if ('kb' in parsedJson) {
-          const kbData: KnowledgeBaseJsonData = KnowledgeBaseJsonDataSchema.parse(parsedJson);
-          dataToProcess = transformKbToTriplets(kbData);
+      if ('result' in parsedJson) {
+        const graphData: GraphJsonData = GraphJsonDataSchema.parse(parsedJson);
+        const { nodes, edges } = processGraphData(graphData);
+        setGraphElements({ nodes, edges });
+      } else if ('kb' in parsedJson) {
+        const kbData: KnowledgeBaseJsonData = KnowledgeBaseJsonDataSchema.parse(parsedJson);
+        const tripletData = transformKbToTriplets(kbData);
+        const { nodes, edges } = processTriplets(tripletData);
+        setGraphElements({ nodes, edges });
+        finalJsonToStore = JSON.stringify(tripletData, null, 2);
       } else if ('triplets' in parsedJson) {
-          dataToProcess = TripletJsonDataSchema.parse(parsedJson);
+        const tripletData = TripletJsonDataSchema.parse(parsedJson);
+        const { nodes, edges } = processTriplets(tripletData);
+        setGraphElements({ nodes, edges });
+        finalJsonToStore = JSON.stringify(tripletData, null, 2);
       } else {
-        throw new Error("Invalid JSON structure. The root key must be either 'triplets' or 'kb'.");
+        throw new Error("Invalid JSON structure. The root key must be 'result', 'triplets', or 'kb'.");
       }
-      
-      const { nodes, edges } = processTriplets(dataToProcess);
-      setGraphElements({ nodes, edges });
       
       // Reset filters when new data is loaded
       setLabelFilter('');
       setTypeFilters(new Set());
-      return JSON.stringify(dataToProcess, null, 2);
+      return finalJsonToStore;
     } catch (e) {
       let errorMessage = 'An unknown error occurred.';
       // Fix: Use ZodError directly as it's now a named import.
@@ -376,8 +392,12 @@ Now, generate the JSON object.`;
       if (generationCancelledRef.current) return;
       
       setLoadingMessage("loadingMessageGenerating");
-      const formattedPrompt = prompt.replace('{MAX_CONCEITOS}', String(maxConcepts));
-      const jsonString = await generateJsonFromText(fileContent, formattedPrompt, model);
+      const finalPrompt = prompt
+        .replace('{TEXTO_DE_ENTRADA}', fileContent)
+        .replace('{TEXTOS_INTEGRAIS_DOS_ARTIGOS}', fileContent)
+        .replace('{MAX_CONCEITOS}', String(maxConcepts));
+        
+      const jsonString = await generateJsonFromText(finalPrompt, model);
       
       if (generationCancelledRef.current) return;
       

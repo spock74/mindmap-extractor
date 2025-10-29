@@ -13,6 +13,12 @@ export const NODE_TYPE_COLORS: { [key: string]: string } = {
   comorbidity: 'bg-orange-600 border-orange-400',
   mechanism: 'bg-cyan-600 border-cyan-400',
   riskFactor: 'bg-rose-700 border-rose-500',
+  // Types from new primary prompt
+  category: 'bg-fuchsia-700 border-fuchsia-500',
+  target: 'bg-sky-700 border-sky-500',
+  evidence: 'bg-emerald-700 border-emerald-500',
+  challenge: 'bg-amber-700 border-amber-500',
+  drugClass: 'bg-violet-700 border-violet-500',
   // Types from Knowledge Base format
   Fundamental: 'bg-red-700 border-red-500',
   Importante: 'bg-yellow-600 border-yellow-400',
@@ -99,4 +105,5 @@ export const LAYOUTS = {
   LR_CURVED: 'layoutLR_CURVED',
 };
 
-export const GEMINI_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+// Fix: Updated model name to 'gemini-flash-lite-latest' to align with current Gemini API guidelines.
+export const GEMINI_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-flash-lite-latest'];

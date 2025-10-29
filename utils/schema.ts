@@ -43,6 +43,23 @@ const KnowledgeNuggetSchema = z.object({
   s_quo: z.string(),
 });
 
+// --- Preprocessing Maps for Robustness ---
+// These maps allow the schema to accept common English terms from the AI
+// and normalize them to the expected Portuguese enum values.
+const complexityMap = {
+    "Low": "Baixa", "Medium": "Média", "High": "Alta",
+    "Baixa": "Baixa", "Média": "Média", "Alta": "Alta"
+};
+const relevanceMap = {
+    "Fundamental": "Fundamental", "Important": "Importante", "Specialized": "Especializado",
+    "Importante": "Importante", "Especializado": "Especializado"
+};
+const stabilityMap = {
+    "Stable": "Estável", "Emerging": "Emergente",
+    "Estável": "Estável", "Emergente": "Emergente"
+};
+
+
 const KnowledgeBaseConceptSchema = z.object({
   c_id: z.string().min(1, { message: "Concept c_id cannot be empty." }),
   s_doc: z.string(),
@@ -50,13 +67,44 @@ const KnowledgeBaseConceptSchema = z.object({
   k_nug: z.array(KnowledgeNuggetSchema),
   p_misc: z.array(z.string()),
   b_lvl: z.array(z.string()),
-  c_cplx: z.enum(["Baixa", "Média", "Alta"]),
-  c_rel: z.enum(["Fundamental", "Importante", "Especializado"]),
-  k_stab: z.enum(["Estável", "Emergente"]),
+  c_cplx: z.preprocess(
+    (val) => typeof val === 'string' && val in complexityMap ? complexityMap[val as keyof typeof complexityMap] : val,
+    z.enum(["Baixa", "Média", "Alta"])
+  ),
+  c_rel: z.preprocess(
+    (val) => typeof val === 'string' && val in relevanceMap ? relevanceMap[val as keyof typeof relevanceMap] : val,
+    z.enum(["Fundamental", "Importante", "Especializado"])
+  ),
+  k_stab: z.preprocess(
+      (val) => typeof val === 'string' && val in stabilityMap ? stabilityMap[val as keyof typeof stabilityMap] : val,
+      z.enum(["Estável", "Emergente"])
+  ),
   r_con: z.array(RelatedConceptSchema),
   m_prmpt: z.array(z.string()),
 });
 
 export const KnowledgeBaseJsonDataSchema = z.object({
   kb: z.array(KnowledgeBaseConceptSchema),
+});
+
+// Schemas for the new direct graph format
+export const GraphNodeSchema = z.object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    type: z.string(),
+});
+
+export const GraphEdgeSchema = z.object({
+    id: z.string().min(1),
+    source: z.string().min(1),
+    target: z.string().min(1),
+    label: z.string().optional(),
+});
+
+export const GraphJsonDataSchema = z.object({
+    result: z.object({
+        title: z.string(),
+        nodes: z.array(GraphNodeSchema),
+        edges: z.array(GraphEdgeSchema),
+    }),
 });
