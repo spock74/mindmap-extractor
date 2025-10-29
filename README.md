@@ -1,6 +1,6 @@
-# Visualizador de Grafo de Conhecimento com IA
+# `Extração e Visualizador de Grafo de Conhecimento com IA
 
-Este é um aplicativo web interativo que transforma dados JSON estruturados ou texto bruto de documentos em grafos de conhecimento e mapas mentais dinâmicos e fáceis de explorar. Utilizando a API do Google Gemini, a aplicação pode extrair relações semânticas de arquivos `.pdf`, `.txt` ou `.md` e visualizá-las instantaneamente.
+Este é um aplicativo web interativo que extrai dados de textos científicos e os transforma em JSON estruturados ou texto bruto de documentos em grafos de conhecimento e mapas mentais dinâmicos e fáceis de explorar. Utilizando a API do Google Gemini, a aplicação pode extrair relações semânticas de arquivos `.pdf`, `.txt` ou `.md` e visualizá-las instantaneamente.
 
 ## Principais Funcionalidades
 

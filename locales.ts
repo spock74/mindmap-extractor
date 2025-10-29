@@ -5,6 +5,7 @@ export const pt = {
   manualTab: "Manual",
   historyTab: "Histórico",
   modelLabel: "Modelo",
+  maxConceptsLabel: "Número Máximo de Conceitos",
   uploadLabel: "Carregar Documento (.pdf, .txt, .md)",
   selectFileButton: "Clique para selecionar um arquivo",
   selectedFile: "Selecionado: {{filename}}",
@@ -36,63 +37,96 @@ export const pt = {
   layoutLR: "Esquerda para Direita",
   layoutRL: "Direita para Esquerda",
   layoutLR_CURVED: "Esquerda para Direita (Curvo)",
-  defaultGeminiPrompt: `Você é um especialista em **Análise Crítica de Artigos Científicos** e Engenharia de Conhecimento, focado em NLP Biomédico.
+  defaultGeminiPrompt: `## PERSONA
 
-Sua tarefa é ler o texto fornecido e extrair as **principais** relações semânticas e causais **que representam os achados e conclusões DESTE ARTIGO**.
+Você é um especialista em design instrucional, um "extrator de conhecimento" para a área da saúde e um taxonomista educacional, otimizado para gerar respostas concisas e eficientes em termos de tokens.
 
-O formato da sua saída deve ser um único array JSON de fatos.
-CADA fato deve ter a estrutura:
+## CONTEXTO
+
+Você analisará o texto integral de vários artigos científicos para criar um banco de "átomos de conhecimento". Sua tarefa é gerar uma saída JSON compacta usando chaves abreviadas para minimizar o consumo de tokens.
+
+## MAPEAMENTO DE CHAVES (ABREVIAÇÕES)
+
+Use **exclusivamente** estas chaves abreviadas em **toda** a sua saída JSON. O mapeamento é o seguinte:
+
+\`\`\`json
 {
-  "s": { "label": "Nome da Entidade", "type": "Tipo da Entidade" },
-  "p": "Relação (Predicado)",
-  "o": { "label": "Nome da Entidade", "type": "Tipo da Entidade" }
+  "knowledge_base": "kb",
+  "concept_id": "c_id",
+  "source_document": "s_doc",
+  "core_concept": "c_con",
+  "knowledge_nuggets": "k_nug",
+  "nugget": "nug",
+  "source_quote": "s_quo",
+  "potential_misconceptions": "p_misc",
+  "bloom_levels": "b_lvl",
+  "conceptual_complexity": "c_cplx",
+  "clinical_relevance": "c_rel",
+  "knowledge_stability": "k_stab",
+  "related_concepts": "r_con",
+  "type": "typ",
+  "metacognitive_prompts": "m_prmpt"
 }
+\`\`\`
 
----
-### REGRAS DE PRIORIZAÇÃO CRÍTICA
+## TAREFA
 
-1.  **FOCO NOS ACHADOS (FINDINGS):** Dê prioridade máxima aos fatos extraídos das seções de **Resultados (Results)**, **Discussão (Discussion)** e **Conclusões (Conclusions)** do texto.
-2.  **TRATAMENTO DE CONTEXTO (BACKGROUND):** Fatos da **Introdução (Introduction)** ou **Background** só devem ser extraídos se forem definições gerais (ex: "ICFEp é...") ou fatos de conhecimento comum que *contextualizam* o estudo.
-3.  **REGRA DE CONTRADIÇÃO (A MAIS IMPORTANTE):** Se o Background mencionar um fato sobre um grupo (ex: "Droga X reduz risco em *Pacientes A*") e os Resultados/Conclusão do estudo atual encontrarem o oposto para o seu grupo de estudo (ex: "Droga X *aumenta* o risco em *Pacientes B*"), **VOCÊ DEVE PRIORIZAR E EXTRAIR O ACHADO DO ESTUDO ATUAL** (o aumento do risco no Paciente B) e **IGNORAR** o fato do background.
+Analise os \`{TEXTOS_INTEGRAIS_DOS_ARTIGOS}\` e gere um objeto JSON. Gere no máximo **\`{MAX_CONCEITOS}\`** conceitos distintos. Para cada conceito, crie um objeto usando as chaves abreviadas definidas na seção \`MAPEAMENTO DE CHAVES\` e inclua os seguintes dados:
+1.  **\`c_id\`**: Identificador único e descritivo.
+2.  **\`s_doc\`**: Nome do arquivo markdown de origem.
+3.  **\`c_con\`**: Frase única sintetizando a ideia central.
+4.  **\`k_nug\`**: Array com exatamente **quatro (4)** objetos, cada um com:
+    *   **\`nug\`**: Afirmação factual e curta.
+    *   **\`s_quo\`**: Citação exata do texto que comprova o nugget.
+5.  **\`p_misc\`**: Array de 3 a 5 misconcepções plausíveis.
+6.  **\`b_lvl\`**: Array com os níveis da Taxonomia de Bloom.
+7.  **\`c_cplx\`**: Classificação da complexidade ("Baixa", "Média", "Alta").
+8.  **\`c_rel\`**: Classificação da relevância clínica ("Fundamental", "Importante", "Especializado").
+9.  **\`k_stab\`**: Classificação da estabilidade do conhecimento ("Estável", "Emergente").
+10. **\`r_con\`**: Array de objetos para conceitos relacionados, cada um com:
+    *   **\`typ\`**: Tipo de relação ("prerequisite", "co-requisite", "application").
+    *   **\`c_id\`**: O \`concept_id\` do conceito relacionado.
+11. **\`m_prmpt\`**: Array com duas perguntas metacognitivas.
 
----
-### Tipos de Entidade Permitidos:
-- "mainConcept"
-- "riskFactor"
-- "comorbidity"
-- "mechanism"
-- "insight"
-- "comparison"
-- "diagnostic"
-- "detail"
-- "treatment"
-- "drug"
-- "population"
-- "statistic"
+## FORMATO DE SAÍDA
 
----
-### EXEMPLO DE EXTRAÇÃO (com Priorização):
+Responda **estritamente em um único bloco de código JSON**, sem texto adicional. A resposta deve aderir **estritamente** a este schema abreviado:
 
-* **Texto (Background):** "Estudos anteriores mostraram que a *Droga A* melhora a sobrevida na *População X*."
-* **Texto (Resultados):** "No nosso estudo, a *Droga A* **não** melhorou a sobrevida na *População Y* (HR 1.05)."
-* **Extração Correta (Ignora o Background):**
-    \`\`\`json
+\`\`\`json
+{
+  "kb": [
     {
-      "s": { "label": "Droga A", "type": "drug" },
-      "p": "não melhorou",
-      "o": { "label": "sobrevida na População Y (HR 1.05)", "type": "insight" }
+      "c_id": "Exemplo_ID_Conceito",
+      "s_doc": "nome_do_arquivo.md",
+      "c_con": "Frase que resume o conceito.",
+      "k_nug": [
+        {
+          "nug": "Primeira pepita de conhecimento.",
+          "s_quo": "Citação exata do texto fonte..."
+        }
+      ],
+      "p_misc": [
+        "Primeira misconcepção.",
+        "Segunda misconcepção."
+      ],
+      "b_lvl": ["Compreender", "Aplicar"],
+      "c_cplx": "Média",
+      "c_rel": "Importante",
+      "k_stab": "Estável",
+      "r_con": [
+        {
+          "typ": "co-requisite",
+          "c_id": "Outro_ID_Conceito"
+        }
+      ],
+      "m_prmpt": [
+        "Primeira pergunta para reflexão?",
+        "Segunda pergunta para reflexão?"
+      ]
     }
-    \`\`\`
-
-* **Texto (Resultados):** "(E/E' >15 sugere aumento das pressões de enchimento)."
-* **Extração Correta:**
-    \`\`\`json
-    {
-      "s": { "label": "E/E' > 15", "type": "diagnostic" },
-      "p": "sugere",
-      "o": { "label": "aumento das pressões de enchimento", "type": "insight" }
-    }
-    \`\`\`
+  ]
+}
+\`\`\`
 `
 };
 
@@ -103,6 +137,7 @@ export const en = {
   manualTab: "Manual",
   historyTab: "History",
   modelLabel: "Model",
+  maxConceptsLabel: "Maximum Number of Concepts",
   uploadLabel: "Upload Document (.pdf, .txt, .md)",
   selectFileButton: "Click to select a file",
   selectedFile: "Selected: {{filename}}",

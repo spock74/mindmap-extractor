@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -17,11 +14,12 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { ZodError } from 'zod';
 
 import { getLayoutedElements } from './utils/layout';
-import { JsonDataSchema } from './utils/schema';
-import { JsonData, Triplet, HistoryItem } from './types';
+import { TripletJsonDataSchema, KnowledgeBaseJsonDataSchema } from './utils/schema';
+import { TripletJsonData, KnowledgeBaseJsonData, Triplet, HistoryItem, KnowledgeBaseConcept } from './types';
 import { DEFAULT_JSON_DATA, GEMINI_MODELS, NODE_TYPE_COLORS, LAYOUTS } from './constants';
 import { CustomNode } from './components/CustomNode';
 import { useI18n } from './i18n';
+import { breakCycles } from './utils/graph';
 
 // --- PDF Worker Setup ---
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdfjs-dist/build/pdf.worker.min.mjs';
@@ -63,6 +61,35 @@ const readFileContent = async (file: File): Promise<string> => {
   });
 };
 
+const transformKbToTriplets = (data: KnowledgeBaseJsonData): TripletJsonData => {
+    const triplets: Triplet[] = [];
+    const conceptMap = new Map<string, KnowledgeBaseConcept>(data.kb.map(c => [c.c_id, c]));
+
+    for (const concept of data.kb) {
+        if (concept.r_con) {
+            for (const relation of concept.r_con) {
+                const targetConcept = conceptMap.get(relation.c_id);
+                if (targetConcept) {
+                    const newTriplet: Triplet = {
+                        s: {
+                            label: concept.c_con,
+                            type: concept.c_rel,
+                        },
+                        p: relation.typ,
+                        o: {
+                            label: targetConcept.c_con,
+                            type: targetConcept.c_rel,
+                        },
+                    };
+                    triplets.push(newTriplet);
+                }
+            }
+        }
+    }
+    return { triplets };
+};
+
+
 // --- React Flow Configuration ---
 
 const nodeTypes = {
@@ -75,7 +102,7 @@ function App() {
   const { t, language, setLanguage } = useI18n();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [layout, setLayout] = useState<string>('TB');
+  const [layout, setLayout] = useState<string>('LR_CURVED');
 
   // State for inputs and data
   const [jsonInput, setJsonInput] = useState<string>(DEFAULT_JSON_DATA);
@@ -91,7 +118,16 @@ function App() {
   // State for Filtering
   const [labelFilter, setLabelFilter] = useState<string>('');
   const [typeFilters, setTypeFilters] = useState<Set<string>>(new Set());
-  const allNodeTypes = useMemo(() => Object.keys(NODE_TYPE_COLORS), []);
+  const availableTypes = useMemo(() => {
+    if (!graphElements?.nodes) return [];
+    const types = new Set<string>();
+    graphElements.nodes.forEach(node => {
+        if (node.data.type) {
+            types.add(node.data.type);
+        }
+    });
+    return Array.from(types).sort();
+  }, [graphElements]);
 
 
   // State for Generation tab
@@ -99,6 +135,7 @@ function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [prompt, setPrompt] = useState<string>(t('defaultGeminiPrompt'));
   const [model, setModel] = useState<string>(GEMINI_MODELS[1]); // Default to flash
+  const [maxConcepts, setMaxConcepts] = useState<number>(10);
   const generationCancelledRef = useRef<boolean>(false);
   
   // Update prompt when language changes
@@ -115,21 +152,11 @@ function App() {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
+    // The prompt is now more generic as the user can provide complex instructions
     const finalPrompt = `
-You are an expert at analyzing documents and extracting structured information.
-Your task is to read the following document and generate a knowledge graph based on the user's request.
-The output MUST be a valid JSON object following the schema provided.
-
-**JSON Output Schema:**
-- The root of the object must be a single key called "triplets".
-- "triplets" must be an array of objects.
-- Each object in the array represents a relationship (a triplet).
-- Each triplet must have three keys: "s" (subject), "p" (predicate), and "o" (object).
-- "s" and "o" must be objects with two keys:
-    - "label": (string) The name of the entity.
-    - "type": (string) The category of the entity. Choose from: ${Object.keys(NODE_TYPE_COLORS).join(', ')}.
-- "p" must be a non-empty string describing the relationship.
-- "o" can be null if there is no object for a given subject and predicate.
+Based on the user's request, analyze the following document and generate a valid JSON object.
+The structure of the JSON will be dictated by the user's request.
+Ensure the output is only the raw JSON, without any surrounding text, explanations, or markdown formatting.
 
 **User's Request:**
 ${userPrompt}
@@ -139,7 +166,7 @@ ${userPrompt}
 ${content}
 ---
 
-Now, generate the JSON object. Do not include any other text, markdown formatting, or explanations. Only output the raw JSON.`;
+Now, generate the JSON object.`;
 
     const response = await ai.models.generateContent({
         model: selectedModel,
@@ -247,56 +274,73 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
 
 
   // --- Data Processing Callbacks ---
+    
+  const processTriplets = (data: TripletJsonData): { nodes: Node[], edges: Edge[] } => {
+    const triplets = data.triplets;
+    const nodeMap = new Map<string, Node>();
+    const initialEdges: Edge[] = [];
 
-  const processJsonAndSetGraph = useCallback((jsonString: string) => {
+    triplets.forEach((triplet: Triplet, index: number) => {
+        if (triplet.s?.label && !nodeMap.has(triplet.s.label)) {
+            nodeMap.set(triplet.s.label, {
+                id: triplet.s.label,
+                type: 'custom',
+                data: { label: triplet.s.label, type: triplet.s.type || 'default' },
+                position: { x: 0, y: 0 },
+            });
+        }
+        if (triplet.o?.label && !nodeMap.has(triplet.o.label)) {
+            nodeMap.set(triplet.o.label, {
+                id: triplet.o.label,
+                type: 'custom',
+                data: { label: triplet.o.label, type: triplet.o.type || 'default' },
+                position: { x: 0, y: 0 },
+            });
+        }
+        if (triplet.s?.label && triplet.o?.label && triplet.p) {
+            initialEdges.push({
+                id: `e-${index}-${triplet.s.label}-${triplet.o.label}`,
+                source: triplet.s.label,
+                target: triplet.o.label,
+                label: triplet.p,
+                type: 'smoothstep',
+                markerEnd: { type: MarkerType.ArrowClosed, color: '#A0AEC0' },
+                style: { stroke: '#A0AEC0', strokeWidth: 2 },
+                labelStyle: { fill: '#E2E8F0', fontSize: 12 },
+                labelBgStyle: { fill: '#2D3748' },
+            });
+        }
+    });
+    
+    const nodes = Array.from(nodeMap.values());
+    const edges = breakCycles(nodes, initialEdges);
+
+    return { nodes, edges };
+  };
+    
+  const processJsonAndSetGraph = useCallback((jsonString: string): string | null => {
     setError(null);
     setGraphElements(null);
     try {
       const parsedJson = JSON.parse(jsonString);
-      const data: JsonData = JsonDataSchema.parse(parsedJson);
+      let dataToProcess: TripletJsonData;
       
-      const triplets = data.triplets;
-      const nodeMap = new Map<string, Node>();
-      const initialEdges: Edge[] = [];
-
-      triplets.forEach((triplet: Triplet, index: number) => {
-        if (triplet.s?.label && !nodeMap.has(triplet.s.label)) {
-          nodeMap.set(triplet.s.label, {
-            id: triplet.s.label,
-            type: 'custom',
-            data: { label: triplet.s.label, type: triplet.s.type || 'default' },
-            position: { x: 0, y: 0 },
-          });
-        }
-        if (triplet.o?.label && !nodeMap.has(triplet.o.label)) {
-          nodeMap.set(triplet.o.label, {
-            id: triplet.o.label,
-            type: 'custom',
-            data: { label: triplet.o.label, type: triplet.o.type || 'default' },
-            position: { x: 0, y: 0 },
-          });
-        }
-        if (triplet.s?.label && triplet.o?.label && triplet.p) {
-          initialEdges.push({
-            id: `e-${index}-${triplet.s.label}-${triplet.o.label}`,
-            source: triplet.s.label,
-            target: triplet.o.label,
-            label: triplet.p,
-            type: 'smoothstep',
-            markerEnd: { type: MarkerType.ArrowClosed, color: '#A0AEC0' },
-            style: { stroke: '#A0AEC0', strokeWidth: 2 },
-            labelStyle: { fill: '#E2E8F0', fontSize: 12 },
-            labelBgStyle: { fill: '#2D3748' },
-          });
-        }
-      });
+      if ('kb' in parsedJson) {
+          const kbData: KnowledgeBaseJsonData = KnowledgeBaseJsonDataSchema.parse(parsedJson);
+          dataToProcess = transformKbToTriplets(kbData);
+      } else if ('triplets' in parsedJson) {
+          dataToProcess = TripletJsonDataSchema.parse(parsedJson);
+      } else {
+        throw new Error("Invalid JSON structure. The root key must be either 'triplets' or 'kb'.");
+      }
       
-      const initialNodes = Array.from(nodeMap.values());
+      const { nodes, edges } = processTriplets(dataToProcess);
+      setGraphElements({ nodes, edges });
+      
       // Reset filters when new data is loaded
       setLabelFilter('');
       setTypeFilters(new Set());
-      setGraphElements({ nodes: initialNodes, edges: initialEdges });
-      return true;
+      return JSON.stringify(dataToProcess, null, 2);
     } catch (e) {
       let errorMessage = 'An unknown error occurred.';
       // Fix: Use ZodError directly as it's now a named import.
@@ -311,7 +355,7 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
       setError(errorMessage);
       setIsLoading(false);
       setLoadingMessage('');
-      return false;
+      return null;
     }
   }, [t]);
   
@@ -332,23 +376,24 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
       if (generationCancelledRef.current) return;
       
       setLoadingMessage("loadingMessageGenerating");
-      const jsonString = await generateJsonFromText(fileContent, prompt, model);
+      const formattedPrompt = prompt.replace('{MAX_CONCEITOS}', String(maxConcepts));
+      const jsonString = await generateJsonFromText(fileContent, formattedPrompt, model);
       
       if (generationCancelledRef.current) return;
       
       setLoadingMessage("loadingMessageProcessing");
-      const success = processJsonAndSetGraph(jsonString);
+      const finalJsonString = processJsonAndSetGraph(jsonString);
 
-      if (success) {
+      if (finalJsonString) {
         const newHistoryItem: HistoryItem = {
           id: `hist-${Date.now()}`,
           filename: selectedFile.name,
           prompt: prompt,
-          jsonString: jsonString,
+          jsonString: finalJsonString,
           timestamp: new Date().toISOString(),
         };
         setHistory(prev => [newHistoryItem, ...prev]);
-        setJsonInput(jsonString);
+        setJsonInput(finalJsonString);
       }
     } catch (e) {
       if (generationCancelledRef.current) {
@@ -461,6 +506,20 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
                         {GEMINI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
                       </select>
                     </div>
+
+                    <div>
+                      <label htmlFor="max-concepts-input" className="text-sm font-medium text-gray-300 mb-2 block">
+                        {t('maxConceptsLabel')}
+                      </label>
+                      <input
+                        id="max-concepts-input"
+                        type="number"
+                        value={maxConcepts}
+                        onChange={(e) => setMaxConcepts(Math.max(1, parseInt(e.target.value, 10)) || 1)}
+                        min="1"
+                        className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200"
+                      />
+                    </div>
                   
                     <div>
                         <label htmlFor="file-upload" className="text-sm font-medium text-gray-300 mb-2 block">
@@ -498,7 +557,12 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
                         </label>
                         <textarea id="json-input" value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder="Enter JSON data..." />
                     </div>
-                    <button onClick={() => processJsonAndSetGraph(jsonInput)} disabled={isLoading} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                    <button onClick={() => {
+                      const finalJsonString = processJsonAndSetGraph(jsonInput);
+                      if (finalJsonString) {
+                          setJsonInput(finalJsonString);
+                      }
+                    }} disabled={isLoading} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
                         {t('generateGraphButton')}
                     </button>
                 </div>
@@ -563,7 +627,7 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
                         className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors"
                     />
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                        {allNodeTypes.map(type => (
+                        {availableTypes.map(type => (
                             <label key={type} className="flex items-center gap-2 text-gray-300 cursor-pointer">
                                 <input
                                     type="checkbox"
@@ -575,12 +639,14 @@ Now, generate the JSON object. Do not include any other text, markdown formattin
                             </label>
                         ))}
                     </div>
-                    <button
-                        onClick={handleClearFilters}
-                        className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
-                    >
-                        {t('clearFiltersButton')}
-                    </button>
+                     { (labelFilter || typeFilters.size > 0) && (
+                        <button
+                            onClick={handleClearFilters}
+                            className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
+                        >
+                            {t('clearFiltersButton')}
+                        </button>
+                     )}
                 </div>
             </div>
         </div>

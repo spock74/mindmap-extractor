@@ -3,12 +3,11 @@ import { Handle, Position, NodeProps } from 'reactflow';
 import { NODE_TYPE_COLORS } from '../constants';
 
 export const CustomNode: React.FC<NodeProps> = memo(({ data }) => {
-  const colorClass = NODE_TYPE_COLORS[data.type] || NODE_TYPE_COLORS.default;
-
   const isHorizontal = data.layoutDirection === 'LR' || data.layoutDirection === 'RL';
   const targetPosition = isHorizontal ? Position.Left : Position.Top;
   const sourcePosition = isHorizontal ? Position.Right : Position.Bottom;
 
+  const colorClass = NODE_TYPE_COLORS[data.type] || NODE_TYPE_COLORS.default;
   return (
     <>
       <Handle type="target" position={targetPosition} className="!bg-gray-500" />

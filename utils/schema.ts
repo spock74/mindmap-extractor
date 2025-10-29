@@ -26,8 +26,37 @@ const TripletSchema = z.object({
   o: S_O_NodeSchema.nullable(),
 });
 
-// The main schema for the entire JSON object.
-// It expects a root object with a 'triplets' key which is an array of our TripletSchema.
-export const JsonDataSchema = z.object({
+// The main schema for the triplet JSON object.
+export const TripletJsonDataSchema = z.object({
   triplets: z.array(TripletSchema),
+});
+
+
+// Schemas for the new Knowledge Base format
+const RelatedConceptSchema = z.object({
+  typ: z.enum(["prerequisite", "co-requisite", "application"]),
+  c_id: z.string().min(1, { message: "Related concept c_id cannot be empty." }),
+});
+
+const KnowledgeNuggetSchema = z.object({
+  nug: z.string(),
+  s_quo: z.string(),
+});
+
+const KnowledgeBaseConceptSchema = z.object({
+  c_id: z.string().min(1, { message: "Concept c_id cannot be empty." }),
+  s_doc: z.string(),
+  c_con: z.string(),
+  k_nug: z.array(KnowledgeNuggetSchema),
+  p_misc: z.array(z.string()),
+  b_lvl: z.array(z.string()),
+  c_cplx: z.enum(["Baixa", "Média", "Alta"]),
+  c_rel: z.enum(["Fundamental", "Importante", "Especializado"]),
+  k_stab: z.enum(["Estável", "Emergente"]),
+  r_con: z.array(RelatedConceptSchema),
+  m_prmpt: z.array(z.string()),
+});
+
+export const KnowledgeBaseJsonDataSchema = z.object({
+  kb: z.array(KnowledgeBaseConceptSchema),
 });

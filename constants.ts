@@ -1,6 +1,3 @@
-
-
-
 export const NODE_WIDTH = 200;
 export const NODE_HEIGHT = 60;
 
@@ -17,6 +14,10 @@ export const NODE_TYPE_COLORS: { [key: string]: string } = {
   comorbidity: 'bg-orange-600 border-orange-400',
   mechanism: 'bg-cyan-600 border-cyan-400',
   riskFactor: 'bg-rose-700 border-rose-500',
+  // Types from Knowledge Base format
+  Fundamental: 'bg-red-700 border-red-500',
+  Importante: 'bg-yellow-600 border-yellow-400',
+  Especializado: 'bg-blue-600 border-blue-400',
   default: 'bg-slate-700 border-slate-500',
 };
 
