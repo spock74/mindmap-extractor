@@ -117,6 +117,7 @@ function App() {
   
   // State for Filtering
   const [labelFilter, setLabelFilter] = useState<string>('');
+  const [edgeLabelFilter, setEdgeLabelFilter] = useState<string>('');
   const [typeFilters, setTypeFilters] = useState<Set<string>>(new Set());
   const availableTypes = useMemo(() => {
     if (!graphElements?.nodes) return [];
@@ -204,7 +205,7 @@ function App() {
     setLoadingMessage('loadingMessageApplyingFilters');
 
     // 1. Filtering
-    const hasActiveFilters = labelFilter.trim() !== '' || typeFilters.size > 0;
+    const hasActiveFilters = labelFilter.trim() !== '' || typeFilters.size > 0 || edgeLabelFilter.trim() !== '';
 
     const filteredNodesSource = hasActiveFilters
       ? graphElements.nodes.filter(node => {
@@ -217,10 +218,27 @@ function App() {
     const visibleNodeIds = new Set(filteredNodesSource.map(n => n.id));
 
     const filteredEdgesSource = hasActiveFilters
-      ? graphElements.edges.filter(edge => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target))
+      ? graphElements.edges.filter(edge => {
+            const edgeLabelMatch = edgeLabelFilter.trim() === '' || (edge.label && typeof edge.label === 'string' && edge.label.toLowerCase().includes(edgeLabelFilter.trim().toLowerCase()));
+            return visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target) && edgeLabelMatch;
+        })
       : graphElements.edges;
 
-    if (filteredNodesSource.length === 0 && hasActiveFilters) {
+    // After filtering edges, some nodes might become disconnected. Let's re-filter nodes to only include those that are part of a visible edge.
+    const nodesInVisibleEdges = new Set<string>();
+    filteredEdgesSource.forEach(edge => {
+        nodesInVisibleEdges.add(edge.source);
+        nodesInVisibleEdges.add(edge.target);
+    });
+
+    // If there is an edge filter, we only show nodes that are part of the filtered edges.
+    // If there isn't an edge filter, we show all nodes that matched the node filters.
+    const finalFilteredNodes = edgeLabelFilter.trim() !== ''
+        ? filteredNodesSource.filter(node => nodesInVisibleEdges.has(node.id))
+        : filteredNodesSource;
+
+
+    if (finalFilteredNodes.length === 0 && hasActiveFilters) {
         setNodes([]);
         setEdges([]);
         setIsLoading(false);
@@ -231,7 +249,7 @@ function App() {
     // 2. Layouting (using the filtered elements)
     const direction = layout.startsWith('LR') ? 'LR' : layout.startsWith('RL') ? 'RL' : layout.startsWith('BT') ? 'BT' : 'TB';
       
-    const copiedNodes = JSON.parse(JSON.stringify(filteredNodesSource));
+    const copiedNodes = JSON.parse(JSON.stringify(finalFilteredNodes));
     const copiedEdges = JSON.parse(JSON.stringify(filteredEdgesSource));
       
     const nodesWithLayoutData = copiedNodes.map((node: Node) => ({
@@ -254,7 +272,7 @@ function App() {
     setIsLoading(false);
     setLoadingMessage('');
 
-  }, [graphElements, layout, labelFilter, typeFilters, setNodes, setEdges]);
+  }, [graphElements, layout, labelFilter, typeFilters, edgeLabelFilter, setNodes, setEdges]);
 
 
   // --- Data Processing Callbacks ---
@@ -355,6 +373,7 @@ function App() {
       
       // Reset filters when new data is loaded
       setLabelFilter('');
+      setEdgeLabelFilter('');
       setTypeFilters(new Set());
       return finalJsonToStore;
     } catch (e) {
@@ -458,6 +477,7 @@ function App() {
 
   const handleClearFilters = useCallback(() => {
       setLabelFilter('');
+      setEdgeLabelFilter('');
       setTypeFilters(new Set());
   }, []);
 
@@ -646,6 +666,13 @@ function App() {
                         onChange={e => setLabelFilter(e.target.value)}
                         className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors"
                     />
+                    <input
+                        type="text"
+                        placeholder={t('filterByEdgeLabelPlaceholder')}
+                        value={edgeLabelFilter}
+                        onChange={e => setEdgeLabelFilter(e.target.value)}
+                        className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors"
+                    />
                     <div className="grid grid-cols-2 gap-2 text-sm">
                         {availableTypes.map(type => (
                             <label key={type} className="flex items-center gap-2 text-gray-300 cursor-pointer">
@@ -659,7 +686,7 @@ function App() {
                             </label>
                         ))}
                     </div>
-                     { (labelFilter || typeFilters.size > 0) && (
+                     { (labelFilter.trim() !== '' || typeFilters.size > 0 || edgeLabelFilter.trim() !== '') && (
                         <button
                             onClick={handleClearFilters}
                             className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
