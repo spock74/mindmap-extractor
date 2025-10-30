@@ -24,6 +24,7 @@ const TripletSchema = z.object({
   s: S_O_NodeSchema,
   p: z.string().min(1, { message: "Predicate 'p' cannot be empty." }),
   o: S_O_NodeSchema.nullable(),
+  source_quote: z.string().optional(),
 });
 
 // The main schema for the triplet JSON object.
@@ -92,6 +93,7 @@ export const GraphNodeSchema = z.object({
     id: z.string().min(1),
     label: z.string().min(1),
     type: z.string(),
+    source_quote: z.string().optional(),
 });
 
 export const GraphEdgeSchema = z.object({

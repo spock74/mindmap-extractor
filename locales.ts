@@ -42,6 +42,8 @@ export const pt = {
   layoutLR: "Esquerda para Direita",
   layoutRL: "Direita para Esquerda",
   layoutLR_CURVED: "Esquerda para Direita (Curvo)",
+  traceabilityDrawerTitle: "Origem do Texto",
+  traceabilityDrawerEmpty: "Nenhuma citação de origem disponível para este nó.",
   defaultGeminiPrompt: `Você é um especialista em **Análise Crítica de Artigos Científicos** e Engenharia do Conhecimento, com foco em PNL Biomédica.
 
 Sua tarefa é ler o texto fornecido e extrair as **principais** relações semânticas e causais **que representam os achados e conclusões DESTE ARTIGO**.
@@ -51,15 +53,17 @@ CADA fato deve ter a estrutura:
 {
   "s": { "label": "Nome da Entidade", "type": "Tipo da Entidade" },
   "p": "Relação (Predicado)",
-  "o": { "label": "Nome da Entidade", "type": "Tipo da Entidade" }
+  "o": { "label": "Nome da Entidade", "type": "Tipo da Entidade" },
+  "source_quote": "A sentença exata do texto original que justifica este fato."
 }
 
 ---
-### REGRAS DE PRIORIZAÇÃO CRÍTICA
+### REGRAS DE EXTRAÇÃO E PRIORIZAÇÃO
 
-1.  **FOCO NOS ACHADOS:** Dê prioridade máxima aos fatos extraídos das seções de **Resultados**, **Discussão** e **Conclusões** do texto.
-2.  **MANUSEIO DO CONTEXTO (INTRODUÇÃO):** Fatos da **Introdução** ou **Histórico** só devem ser extraídos se forem definições gerais (ex: "ICFEp é...") ou fatos de conhecimento comum que *contextualizam* o estudo.
-3.  **REGRA DA CONTRADIÇÃO (A MAIS IMPORTANTE):** Se a Introdução menciona um fato sobre um grupo (ex: "Droga X reduz o risco em *Pacientes A*") e os Resultados/Conclusão do estudo atual encontram o oposto para o seu grupo de estudo (ex: "Droga X *aumenta* o risco em *Pacientes B*"), **VOCÊ DEVE PRIORIZAR E EXTRAIR O ACHADO DO ESTUDO ATUAL** (o risco aumentado no Paciente B) e **IGNORAR** o fato da introdução.
+1.  **CITAÇÃO DE ORIGEM É OBRIGATÓRIA:** Para cada fato extraído, você DEVE incluir o campo \`source_quote\`. A citação deve ser a sentença exata e não modificada do texto original que contém a informação para o fato.
+2.  **FOCO NOS ACHADOS:** Dê prioridade máxima aos fatos extraídos das seções de **Resultados**, **Discussão** e **Conclusões** do texto.
+3.  **MANUSEIO DO CONTEXTO (INTRODUÇÃO):** Fatos da **Introdução** ou **Histórico** só devem ser extraídos se forem definições gerais (ex: "ICFEp é...") ou fatos de conhecimento comum que *contextualizam* o estudo.
+4.  **REGRA DA CONTRADIÇÃO (A MAIS IMPORTANTE):** Se a Introdução menciona um fato sobre um grupo (ex: "Droga X reduz o risco em *Pacientes A*") e os Resultados/Conclusão do estudo atual encontram o oposto para o seu grupo de estudo (ex: "Droga X *aumenta* o risco em *Pacientes B*"), **VOCÊ DEVE PRIORIZAR E EXTRAIR O ACHADO DO ESTUDO ATUAL** (o risco aumentado no Paciente B) e **IGNORAR** o fato da introdução.
 
 ---
 ### Tipos de Entidade Permitidos:
@@ -79,24 +83,14 @@ CADA fato deve ter a estrutura:
 ---
 ### EXEMPLO DE EXTRAÇÃO (com Priorização):
 
-* **Texto (Introdução):** "Estudos anteriores mostraram que a *Droga A* melhora a sobrevida na *População X*."
-* **Texto (Resultados):** "Em nosso estudo, a *Droga A* **não** melhorou a sobrevida na *População Y* (HR 1.05)."
-* **Extração Correta (Ignora a Introdução):**
+* **Texto (Resultados):** "Em nosso estudo, a Droga A não melhorou a sobrevida na População Y (HR 1.05)."
+* **Extração Correta:**
     \`\`\`json
     {
       "s": { "label": "Droga A", "type": "drug" },
       "p": "não melhorou",
-      "o": { "label": "sobrevida na População Y (HR 1.05)", "type": "insight" }
-    }
-    \`\`\`
-
-* **Texto (Resultados):** "(E/E' > 15 sugere pressões de enchimento aumentadas)."
-* **Extração Correta:**
-    \`\`\`json
-    {
-      "s": { "label": "E/E' > 15", "type": "diagnostic" },
-      "p": "sugere",
-      "o": { "label": "pressões de enchimento aumentadas", "type": "insight" }
+      "o": { "label": "sobrevida na População Y (HR 1.05)", "type": "insight" },
+      "source_quote": "Em nosso estudo, a Droga A não melhorou a sobrevida na População Y (HR 1.05)."
     }
     \`\`\`
 `
@@ -146,6 +140,8 @@ export const en = {
   layoutLR: "Left to Right",
   layoutRL: "Right to Left",
   layoutLR_CURVED: "Left to Right (Curved)",
+  traceabilityDrawerTitle: "Text Origin",
+  traceabilityDrawerEmpty: "No source quote available for this node.",
   defaultGeminiPrompt: `You are an expert in **Critical Analysis of Scientific Papers** and Knowledge Engineering, focused on Biomedical NLP.
 
 Your task is to read the provided text and extract the **main** semantic and causal relationships **that represent the findings and conclusions of THIS ARTICLE**.
@@ -155,15 +151,17 @@ EACH fact must have the structure:
 {
   "s": { "label": "Entity Name", "type": "Entity Type" },
   "p": "Relationship (Predicate)",
-  "o": { "label": "Entity Name", "type": "Entity Type" }
+  "o": { "label": "Entity Name", "type": "Entity Type" },
+  "source_quote": "The exact sentence from the original text that justifies this fact."
 }
 
 ---
-### CRITICAL PRIORITIZATION RULES
+### EXTRACTION AND PRIORITIZATION RULES
 
-1.  **FOCUS ON FINDINGS:** Give maximum priority to facts extracted from the **Results**, **Discussion**, and **Conclusions** sections of the text.
-2.  **CONTEXT HANDLING (BACKGROUND):** Facts from the **Introduction** or **Background** should only be extracted if they are general definitions (e.g., "HFpEF is...") or common knowledge facts that *contextualize* the study.
-3.  **CONTRADICTION RULE (THE MOST IMPORTANT):** If the Background mentions a fact about a group (e.g., "Drug X reduces risk in *Patients A*") and the current study's Results/Conclusion find the opposite for its study group (e.g., "Drug X *increases* risk in *Patients B*"), **YOU MUST PRIORITIZE AND EXTRACT THE CURRENT STUDY'S FINDING** (the increased risk in Patient B) and **IGNORE** the background fact.
+1.  **SOURCE QUOTE IS MANDATORY:** For every triplet you extract, you MUST include the \`source_quote\` field. The quote must be the exact, unmodified sentence from the source text that contains the information for the triplet.
+2.  **FOCUS ON FINDINGS:** Give maximum priority to facts extracted from the **Results**, **Discussion**, and **Conclusions** sections of the text.
+3.  **CONTEXT HANDLING (BACKGROUND):** Facts from the **Introduction** or **Background** should only be extracted if they are general definitions (e.g., "HFpEF is...") or common knowledge facts that *contextualize* the study.
+4.  **CONTRADICTION RULE (THE MOST IMPORTANT):** If the Background mentions a fact about a group (e.g., "Drug X reduces risk in *Patients A*") and the current study's Results/Conclusion find the opposite for its study group (e.g., "Drug X *increases* risk in *Patients B*"), **YOU MUST PRIORITIZE AND EXTRACT THE CURRENT STUDY'S FINDING** (the increased risk in Patient B) and **IGNORE** the background fact.
 
 ---
 ### Allowed Entity Types:
@@ -183,24 +181,14 @@ EACH fact must have the structure:
 ---
 ### EXTRACTION EXAMPLE (with Prioritization):
 
-* **Text (Background):** "Previous studies have shown that *Drug A* improves survival in *Population X*."
-* **Text (Results):** "In our study, *Drug A* did **not** improve survival in *Population Y* (HR 1.05)."
-* **Correct Extraction (Ignores Background):**
+* **Text (Results):** "In our study, Drug A did not improve survival in Population Y (HR 1.05)."
+* **Correct Extraction:**
     \`\`\`json
     {
       "s": { "label": "Drug A", "type": "drug" },
       "p": "did not improve",
-      "o": { "label": "survival in Population Y (HR 1.05)", "type": "insight" }
-    }
-    \`\`\`
-
-* **Text (Results):** "(E/E' > 15 suggests increased filling pressures)."
-* **Correct Extraction:**
-    \`\`\`json
-    {
-      "s": { "label": "E/E' > 15", "type": "diagnostic" },
-      "p": "suggests",
-      "o": { "label": "increased filling pressures", "type": "insight" }
+      "o": { "label": "survival in Population Y (HR 1.05)", "type": "insight" },
+      "source_quote": "In our study, Drug A did not improve survival in Population Y (HR 1.05)."
     }
     \`\`\`
 `

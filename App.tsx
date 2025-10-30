@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -14,6 +15,7 @@ import ReactFlow, {
 import * as pdfjsLib from 'pdfjs-dist';
 // Fix: Use named import for ZodError.
 import { ZodError } from 'zod';
+import { marked } from 'marked';
 
 import { getLayoutedElements } from './utils/layout';
 import { TripletJsonDataSchema, KnowledgeBaseJsonDataSchema, GraphJsonDataSchema } from './utils/schema';
@@ -82,6 +84,8 @@ const transformKbToTriplets = (data: KnowledgeBaseJsonData): TripletJsonData => 
                             label: targetConcept.c_con,
                             type: targetConcept.c_rel,
                         },
+                        // Note: Traceability not directly supported in this transformation
+                        source_quote: concept.k_nug?.[0]?.s_quo || 'Source from KB', 
                     };
                     triplets.push(newTriplet);
                 }
@@ -123,6 +127,7 @@ function App() {
   const [typeFilters, setTypeFilters] = useState<Set<string>>(new Set());
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(new Set());
+  const [activeTrace, setActiveTrace] = useState<{ label: string; quote: string } | null>(null);
   const availableTypes = useMemo(() => {
     if (!graphElements?.nodes) return [];
     const types = new Set<string>();
@@ -295,6 +300,7 @@ function App() {
         layoutDirection: direction,
         isCollapsed: collapsedNodeIds.has(node.id),
         onToggle: handleNodeToggle,
+        onTrace: handleNodeTrace,
       }
     }));
       
@@ -329,7 +335,11 @@ function App() {
             nodeMap.set(triplet.s.label, {
                 id: triplet.s.label,
                 type: 'custom',
-                data: { label: triplet.s.label, type: triplet.s.type || 'default' },
+                data: { 
+                  label: triplet.s.label, 
+                  type: triplet.s.type || 'default', 
+                  source_quote: triplet.source_quote 
+                },
                 position: { x: 0, y: 0 },
             });
         }
@@ -337,7 +347,11 @@ function App() {
             nodeMap.set(triplet.o.label, {
                 id: triplet.o.label,
                 type: 'custom',
-                data: { label: triplet.o.label, type: triplet.o.type || 'default' },
+                data: { 
+                  label: triplet.o.label, 
+                  type: triplet.o.type || 'default', 
+                  source_quote: triplet.source_quote 
+                },
                 position: { x: 0, y: 0 },
             });
         }
@@ -374,7 +388,11 @@ function App() {
     const initialNodesSource = data.result.nodes.map(node => ({
         id: node.id,
         type: 'custom',
-        data: { label: node.label, type: node.type || 'default' },
+        data: { 
+          label: node.label, 
+          type: node.type || 'default', 
+          source_quote: node.source_quote 
+        },
         position: { x: 0, y: 0 },
     }));
 
@@ -431,6 +449,17 @@ function App() {
         if (keys.length === 1 && Array.isArray(parsedJson[keys[0]])) {
             parsedJson = { triplets: parsedJson[keys[0]] };
             finalJsonToStore = JSON.stringify(parsedJson, null, 2);
+        } else if ('nodes' in parsedJson && 'edges' in parsedJson) {
+            // New: Handle direct graph format without a 'result' key, as produced by the advanced prompt.
+            const adaptedGraphData = {
+                result: {
+                    title: parsedJson.title || 'Generated Graph',
+                    nodes: parsedJson.nodes,
+                    edges: parsedJson.edges,
+                }
+            };
+            parsedJson = adaptedGraphData;
+            finalJsonToStore = JSON.stringify(parsedJson, null, 2);
         }
       }
       
@@ -459,6 +488,7 @@ function App() {
       setTypeFilters(new Set());
       setSelectedNodeIds([]);
       setCollapsedNodeIds(new Set());
+      setActiveTrace(null);
       return finalJsonToStore;
     } catch (e) {
       let errorMessage = 'An unknown error occurred.';
@@ -633,6 +663,15 @@ function App() {
         return newSet;
     });
   }, []);
+    
+  const handleNodeTrace = useCallback((nodeData: { label: string; source_quote?: string }) => {
+    if (nodeData.source_quote) {
+        setActiveTrace({ label: nodeData.label, quote: nodeData.source_quote });
+    } else {
+        // Even if no quote, open the drawer to show the message
+        setActiveTrace({ label: nodeData.label, quote: t('traceabilityDrawerEmpty') });
+    }
+  }, [t]);
 
   const reactFlowInstance = useMemo(() => (
     <ReactFlow
@@ -656,7 +695,7 @@ function App() {
   // --- Render ---
 
   return (
-    <div className="flex flex-col md:flex-row h-screen font-sans text-white bg-gray-900">
+    <div className="flex flex-col md:flex-row h-screen font-sans text-white bg-gray-900 relative overflow-hidden">
       <div className="w-full md:w-1/3 lg:w-1/4 p-4 flex flex-col bg-gray-900 border-r border-gray-700 shadow-lg">
         <header className="mb-4 flex-shrink-0">
           <h1 className="text-2xl font-bold text-cyan-400">{t('appTitle')}</h1>
@@ -887,6 +926,24 @@ function App() {
       <main className="w-full md:w-2/3 lg:w-3/4 flex-grow min-h-0">
         {reactFlowInstance}
       </main>
+       <div className={`absolute top-0 right-0 h-screen w-full md:w-1/3 lg:w-1/4 bg-gray-800 border-l border-gray-700 shadow-2xl z-20 transform transition-transform duration-300 ease-in-out ${activeTrace ? 'translate-x-0' : 'translate-x-full'} p-4 flex flex-col`}>
+        {activeTrace && (
+            <>
+                <div className="flex justify-between items-center mb-4 flex-shrink-0">
+                    <h2 className="text-lg font-bold text-cyan-400">{t('traceabilityDrawerTitle')}</h2>
+                    <button onClick={() => setActiveTrace(null)} className="text-gray-400 hover:text-white" aria-label="Close">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div className="text-sm font-semibold text-gray-300 mb-2 truncate" title={activeTrace.label}>
+                    {activeTrace.label}
+                </div>
+                <div className="overflow-y-auto flex-grow bg-gray-900 p-3 rounded-md text-gray-300 text-sm leading-relaxed"
+                     dangerouslySetInnerHTML={{ __html: marked.parse(activeTrace.quote) }}
+                />
+            </>
+        )}
+    </div>
     </div>
   );
 }

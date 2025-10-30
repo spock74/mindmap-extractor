@@ -1,4 +1,5 @@
 
+
 export interface S_O_Node {
   label: string;
   // Fix: Made 'type' optional to resolve a TypeScript error. The compiler
@@ -15,6 +16,7 @@ export interface Triplet {
   // indicated that the type inferred from the Zod schema treated 'o' as
   // optional, while this interface required it, causing a mismatch.
   o?: S_O_Node | null;
+  source_quote?: string;
 }
 
 export interface TripletJsonData {
@@ -67,6 +69,7 @@ export interface GraphNode {
     id: string;
     label: string;
     type: string;
+    source_quote?: string;
 }
 
 export interface GraphEdge {
