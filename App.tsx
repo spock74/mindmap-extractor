@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -463,6 +464,19 @@ function App() {
     }
   }, [t]);
   
+  // --- Memoized calculations for bulk actions ---
+  const canCollapseSelected = useMemo(() => {
+    if (!graphElements || selectedNodeIds.length === 0) return false;
+    return selectedNodeIds.some(id => {
+        const node = graphElements.nodes.find(n => n.id === id);
+        return node?.data.hasChildren;
+    });
+  }, [selectedNodeIds, graphElements]);
+
+  const canExpandSelected = useMemo(() => {
+    if (selectedNodeIds.length === 0 || collapsedNodeIds.size === 0) return false;
+    return selectedNodeIds.some(id => collapsedNodeIds.has(id));
+  }, [selectedNodeIds, collapsedNodeIds]);
 
   // --- Event Handlers ---
 
@@ -570,6 +584,30 @@ function App() {
       setSelectedNodeIds([]);
   }, [selectedNodeIds, graphElements]);
     
+  const handleCollapseSelectedNodes = useCallback(() => {
+    if (!graphElements) return;
+    setCollapsedNodeIds(prev => {
+        const newSet = new Set(prev);
+        selectedNodeIds.forEach(id => {
+            const node = graphElements.nodes.find(n => n.id === id);
+            if (node?.data.hasChildren) {
+                newSet.add(id);
+            }
+        });
+        return newSet;
+    });
+  }, [selectedNodeIds, graphElements]);
+
+  const handleExpandSelectedNodes = useCallback(() => {
+    setCollapsedNodeIds(prev => {
+        const newSet = new Set(prev);
+        selectedNodeIds.forEach(id => {
+            newSet.delete(id);
+        });
+        return newSet;
+    });
+  }, [selectedNodeIds]);
+
   const handleNodeToggle = useCallback((nodeId: string) => {
     setCollapsedNodeIds(prev => {
         const newSet = new Set(prev);
@@ -807,9 +845,23 @@ function App() {
                         {t('bulkActionsTitle', { count: selectedNodeIds.length })}
                     </h2>
                     <div className="flex flex-col gap-2">
+                         <button
+                            onClick={handleCollapseSelectedNodes}
+                            disabled={!canCollapseSelected}
+                            className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
+                        >
+                            {t('collapseSelectedButton')}
+                        </button>
+                        <button
+                            onClick={handleExpandSelectedNodes}
+                            disabled={!canExpandSelected}
+                            className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
+                        >
+                            {t('expandSelectedButton')}
+                        </button>
                         <button
                             onClick={handleDeleteSelectedNodes}
-                            className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-red-800 hover:bg-red-700 text-white transition-colors"
+                            className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-red-800 hover:bg-red-700 text-white transition-colors mt-2"
                         >
                             {t('deleteSelectedButton')}
                         </button>
