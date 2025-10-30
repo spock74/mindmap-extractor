@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -96,6 +94,21 @@ const nodeTypes = {
   custom: CustomNode,
 };
 
+const HamburgerIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="12" x2="21" y2="12"></line>
+    <line x1="3" y1="6" x2="21" y2="6"></line>
+    <line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+);
+
 function App() {
   const { t, language, setLanguage } = useI18n();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -123,6 +136,7 @@ function App() {
   const [isResizing, setIsResizing] = useState(false);
   const [drawerWidth, setDrawerWidth] = useState(window.innerWidth / 3);
   const drawerRef = useRef<HTMLDivElement>(null);
+  const [isControlDrawerOpen, setIsControlDrawerOpen] = useState(true);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -821,8 +835,17 @@ function App() {
   ), [nodes, edges, onNodesChange, onEdgesChange, handleSelectionChange]);
 
   return (
-    <div className="flex flex-col md:flex-row h-screen font-sans text-white bg-gray-900 relative overflow-hidden">
-      <div className="w-full md:w-1/3 lg:w-1/4 p-4 flex flex-col bg-gray-900 border-r border-gray-700 shadow-lg">
+    <div className="h-screen font-sans text-white bg-gray-900 relative overflow-hidden">
+        <button
+          onClick={() => setIsControlDrawerOpen(!isControlDrawerOpen)}
+          className="absolute top-4 left-4 z-30 p-2 bg-gray-800/70 hover:bg-gray-700/90 rounded-full text-white transition-all duration-300"
+          aria-label={isControlDrawerOpen ? t('closePanel') : t('openPanel')}
+          title={isControlDrawerOpen ? t('closePanel') : t('openPanel')}
+        >
+          {isControlDrawerOpen ? <CloseIcon /> : <HamburgerIcon />}
+        </button>
+      
+      <div className={`absolute top-0 left-0 h-full w-full md:w-1/3 lg:w-1/4 p-4 flex flex-col bg-gray-900 border-r border-gray-700 shadow-lg z-20 transform transition-transform duration-300 ease-in-out ${isControlDrawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <header className="mb-4 flex-shrink-0">
           <h1 className="text-2xl font-bold text-cyan-400">{t('appTitle')}</h1>
           <p className="text-sm text-gray-400">{t('appDescription')}</p>
@@ -1074,7 +1097,7 @@ function App() {
             )}
         </div>
       </div>
-      <main className="w-full md:w-2/3 lg:w-3/4 flex-grow min-h-0">
+      <main className="w-full h-full">
         {reactFlowInstance}
       </main>
        <div 

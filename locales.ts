@@ -1,5 +1,4 @@
 
-
 export const pt = {
   appTitle: "Graphfy",
   appDescription: "Visualize grafos de conhecimento de documentos JSON ou texto usando Gemini.",
@@ -56,6 +55,8 @@ export const pt = {
   pdfViewerPageLabel: "Página {{currentPage}} de {{numPages}}",
   pdfViewerErrorLoading: "Erro ao carregar o PDF.",
   pdfViewerErrorRendering: "Erro ao renderizar a página do PDF.",
+  openPanel: "Abrir painel de controle",
+  closePanel: "Fechar painel de controle",
 };
 
 export const en = {
@@ -114,4 +115,6 @@ export const en = {
   pdfViewerPageLabel: "Page {{currentPage}} of {{numPages}}",
   pdfViewerErrorLoading: "Error loading PDF.",
   pdfViewerErrorRendering: "Error rendering PDF page.",
+  openPanel: "Open control panel",
+  closePanel: "Close control panel",
 };

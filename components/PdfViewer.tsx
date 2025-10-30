@@ -43,9 +43,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ file, highlightText }) => 
       canvas.height = viewport.height;
       canvas.width = viewport.width;
 
-      // FIX: The `@ts-expect-error` directive was unused, indicating that the type
-      // definitions for `pdfjs-dist` likely no longer have the issue that required a
-      // workaround. The `render` method correctly accepts `canvasContext`.
+      // FIX: Satisfy the RenderParameters type which requires the `canvas` property in this environment.
       const renderContext = {
         canvasContext: context,
         viewport: viewport,
