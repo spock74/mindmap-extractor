@@ -17,8 +17,18 @@ const CheckIcon = () => (
   </svg>
 );
 
+// SVG for Chevron Icon
+const ChevronIcon = ({ isCollapsed }: { isCollapsed: boolean }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+    className={`transition-transform duration-200 ${isCollapsed ? 'transform -rotate-90' : ''}`}
+    aria-hidden="true"
+  >
+    <polyline points="6 9 12 15 18 9"></polyline>
+  </svg>
+);
 
-export const CustomNode: React.FC<NodeProps> = memo(({ data }) => {
+
+export const CustomNode: React.FC<NodeProps> = memo(({ id, data }) => {
   const [isCopied, setIsCopied] = useState(false);
 
   const isHorizontal = data.layoutDirection === 'LR' || data.layoutDirection === 'RL';
@@ -40,6 +50,14 @@ export const CustomNode: React.FC<NodeProps> = memo(({ data }) => {
     });
   };
 
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (data.onToggle) {
+      data.onToggle(id);
+    }
+  };
+
+
   return (
     <>
       <Handle type="target" position={targetPosition} className="!bg-gray-500" />
@@ -47,6 +65,16 @@ export const CustomNode: React.FC<NodeProps> = memo(({ data }) => {
         className={`relative px-4 py-2 shadow-md rounded-md border-2 text-white ${colorClass} whitespace-normal break-words`}
         style={{ width: `${NODE_WIDTH}px` }}
       >
+        {data.hasChildren && (
+            <button
+                onClick={handleToggle}
+                className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-10 p-0.5 bg-gray-600 rounded-full cursor-pointer text-gray-300 hover:text-white hover:bg-gray-500 transition-colors"
+                aria-label={data.isCollapsed ? "Expand" : "Collapse"}
+                title={data.isCollapsed ? "Expand" : "Collapse"}
+            >
+               <ChevronIcon isCollapsed={data.isCollapsed} />
+            </button>
+        )}
          <button
           onClick={handleCopy}
           className="absolute top-2 right-2 p-1 rounded-full cursor-pointer text-gray-400 hover:text-white hover:bg-black/20 transition-colors"

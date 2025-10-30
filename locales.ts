@@ -40,95 +40,63 @@ export const pt = {
   layoutLR: "Esquerda para Direita",
   layoutRL: "Direita para Esquerda",
   layoutLR_CURVED: "Esquerda para Direita (Curvo)",
-  defaultGeminiPrompt: `# PROMPT APRIMORADO PARA GERAÇÃO DE GRAFO DE CONHECIMENTO (v4.0)
+  defaultGeminiPrompt: `Você é um especialista em **Análise Crítica de Artigos Científicos** e Engenharia do Conhecimento, com foco em PNL Biomédica.
 
-## PERSONA
-> Você é um Engenheiro de Ontologias e Grafos de Conhecimento. Sua missão é modelar informações complexas de textos científicos em uma estrutura de grafo JSON hierárquica, semanticamente rica e logicamente coesa, adequada para visualização de dados.
+Sua tarefa é ler o texto fornecido e extrair as **principais** relações semânticas e causais **que representam os achados e conclusões DESTE ARTIGO**.
 
-## CONTEXTO
-> Você analisará um texto-fonte que resume as abordagens terapêuticas para a Insuficiência Cardíaca Diastólica (ICD). Sua tarefa é decompor este texto em um modelo de conhecimento, representando-o como um grafo de nós e arestas.
-
-## TAREFA
-> Analise o \`{TEXTO_DE_ENTRADA}\` e modele seu conteúdo em um formato de grafo JSON. Siga rigorosamente os princípios de modelagem e as regras de formatação abaixo.
-
-### PRINCÍPIOS DE MODELAGEM DO GRAFO
-
-1.  **Extração Estruturada (Processo Interno):** Antes de gerar o JSON, realize internamente uma extração de dados. Para cada terapia ou alvo mencionado, identifique: o **Alvo** (ex: Miosina), o **Mecanismo** (ex: Inibição da ATPase), a **Evidência** (ex: Aprovado para CMH, resultados em HFpEF), e os **Desafios/Limitações** (ex: Eficácia pode variar).
-
-2.  **Síntese Hierárquica Lógica:** Organize os nós extraídos em uma hierarquia clara e profunda que flua do geral para o específico. A estrutura geral deve seguir a lógica:
-    *   **Nível 0 (Raiz):** \`Insuficiência Cardíaca Diastólica\`
-    *   **Nível 1 (Categorias):** \`Terapias Atuais\`, \`Novas Estratégias\`
-    *   **Nível 2 (Alvos Terapêuticos):** \`Matriz Extracelular\`, \`Sarcômero\`, \`Mitocôndrias\`
-    *   **Nível 3 (Sub-Alvos/Mecanismos):** \`Miosina\`, \`Titin\`, \`Estresse Oxidativo\`
-    *   **Nível 4+ (Detalhes):** \`Inibidores (Mavacamten)\`, \`Evidência Clínica\`, \`Desafios de Translação\`
-
-3.  **Riqueza Semântica (Tipos e Relações):**
-    *   **Tipos de Nós:** Classifique cada nó com um \`type\` que descreva sua função no grafo (veja as regras abaixo). Isso é mais importante do que a diferenciação genérica "input/default/output".
-    *   **Relações (Arestas):** As arestas devem ter um \`label\` que descreva a natureza da conexão (ex: \`inclui\`, \`ageEm\`, \`temMecanismo\`, \`apresentaDesafio\`).
-
-### REGRAS DE FORMATAÇÃO PARA A SAÍDA JSON
-
-#### **Nós (\`nodes\`)**
-> Cada nó deve ser um objeto com:
-> *   \`id\`: String única em **kebab-case** (ex: \`inibidores-miosina\`).
-> *   \`label\`: Texto descritivo e conciso para o nó.
-> *   \`type\`: Classificação semântica do nó. Use **estritamente** um dos seguintes:
->     *   \`mainConcept\`: Para o nó raiz.
->     *   \`category\`: Para as principais divisões (ex: Terapias Atuais, Novas Estratégias).
->     *   \`target\`: Para alvos terapêuticos (ex: Sarcômero, MEC).
->     *   \`mechanism\`: Para mecanismos de ação ou processos fisiopatológicos.
->     *   \`evidence\`: Para resultados de estudos, status de aprovação, ou conclusões.
->     *   \`challenge\`: Para limitações, efeitos colaterais ou desafios de translação.
->     *   \`drugClass\`: Para classes de medicamentos (ex: Beta-bloqueadores).
-
-#### **Arestas (\`edges\`)**
-> Cada aresta deve ser um objeto com:
-> *   \`id\`: String única para a aresta (ex: \`e1-2\`).
-> *   \`source\`: O \`id\` do nó de origem.
-> *   \`target\`: O \`id\` do nó de destino.
-> *   \`label\`: **(Opcional, mas preferível)** Uma string curta descrevendo a relação (ex: "inclui", "age através de", "resulta em", "é limitado por").
-
-## FORMATO DE SAÍDA
-> Responda **estritamente em um único bloco de código JSON**, sem texto adicional. A estrutura deve ser a seguinte:
-
-\`\`\`json
+O formato da sua saída deve ser um único array JSON de fatos.
+CADA fato deve ter a estrutura:
 {
-  "result": {
-    "title": "Terapias para Insuficiência Cardíaca Diastólica: Atuais e Emergentes",
-    "nodes": [
-      {
-        "id": "main",
-        "label": "Insuficiência Cardíaca Diastólica (ICD)",
-        "type": "mainConcept"
-      },
-      {
-        "id": "terapias-atuais",
-        "label": "Terapias Atuais",
-        "type": "category"
-      },
-      {
-        "id": "beta-bloqueadores",
-        "label": "Beta-bloqueadores",
-        "type": "drugClass"
-      }
-    ],
-    "edges": [
-      {
-        "id": "e-main-terapias",
-        "source": "main",
-        "target": "terapias-atuais",
-        "label": "abordada por"
-      },
-      {
-        "id": "e-terapias-betablock",
-        "source": "terapias-atuais",
-        "target": "beta-bloqueadores",
-        "label": "inclui"
-      }
-    ]
-  }
+  "s": { "label": "Nome da Entidade", "type": "Tipo da Entidade" },
+  "p": "Relação (Predicado)",
+  "o": { "label": "Nome da Entidade", "type": "Tipo da Entidade" }
 }
-\`\`\`
+
+---
+### REGRAS DE PRIORIZAÇÃO CRÍTICA
+
+1.  **FOCO NOS ACHADOS:** Dê prioridade máxima aos fatos extraídos das seções de **Resultados**, **Discussão** e **Conclusões** do texto.
+2.  **MANUSEIO DO CONTEXTO (INTRODUÇÃO):** Fatos da **Introdução** ou **Histórico** só devem ser extraídos se forem definições gerais (ex: "ICFEp é...") ou fatos de conhecimento comum que *contextualizam* o estudo.
+3.  **REGRA DA CONTRADIÇÃO (A MAIS IMPORTANTE):** Se a Introdução menciona um fato sobre um grupo (ex: "Droga X reduz o risco em *Pacientes A*") e os Resultados/Conclusão do estudo atual encontram o oposto para o seu grupo de estudo (ex: "Droga X *aumenta* o risco em *Pacientes B*"), **VOCÊ DEVE PRIORIZAR E EXTRAIR O ACHADO DO ESTUDO ATUAL** (o risco aumentado no Paciente B) e **IGNORAR** o fato da introdução.
+
+---
+### Tipos de Entidade Permitidos:
+- "mainConcept"
+- "riskFactor"
+- "comorbidity"
+- "mechanism"
+- "insight"
+- "comparison"
+- "diagnostic"
+- "detail"
+- "treatment"
+- "drug"
+- "population"
+- "statistic"
+
+---
+### EXEMPLO DE EXTRAÇÃO (com Priorização):
+
+* **Texto (Introdução):** "Estudos anteriores mostraram que a *Droga A* melhora a sobrevida na *População X*."
+* **Texto (Resultados):** "Em nosso estudo, a *Droga A* **não** melhorou a sobrevida na *População Y* (HR 1.05)."
+* **Extração Correta (Ignora a Introdução):**
+    \`\`\`json
+    {
+      "s": { "label": "Droga A", "type": "drug" },
+      "p": "não melhorou",
+      "o": { "label": "sobrevida na População Y (HR 1.05)", "type": "insight" }
+    }
+    \`\`\`
+
+* **Texto (Resultados):** "(E/E' > 15 sugere pressões de enchimento aumentadas)."
+* **Extração Correta:**
+    \`\`\`json
+    {
+      "s": { "label": "E/E' > 15", "type": "diagnostic" },
+      "p": "sugere",
+      "o": { "label": "pressões de enchimento aumentadas", "type": "insight" }
+    }
+    \`\`\`
 `
 };
 

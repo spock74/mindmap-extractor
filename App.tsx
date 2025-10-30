@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -120,6 +121,7 @@ function App() {
   const [edgeLabelFilter, setEdgeLabelFilter] = useState<string>('');
   const [typeFilters, setTypeFilters] = useState<Set<string>>(new Set());
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(new Set());
   const availableTypes = useMemo(() => {
     if (!graphElements?.nodes) return [];
     const types = new Set<string>();
@@ -194,6 +196,27 @@ function App() {
     }
   }, [history]);
   
+  const getAllDescendants = useCallback((nodeId: string, allEdges: Edge[]): Set<string> => {
+    const descendants = new Set<string>();
+    const queue: string[] = [nodeId];
+    const visited = new Set<string>();
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      if (visited.has(currentId)) continue;
+      visited.add(currentId);
+      
+      const children = allEdges.filter(edge => edge.source === currentId).map(edge => edge.target);
+      
+      for (const childId of children) {
+        if (!descendants.has(childId)) {
+          descendants.add(childId);
+          queue.push(childId);
+        }
+      }
+    }
+    return descendants;
+  }, []);
 
   useEffect(() => {
     if (!graphElements) {
@@ -204,8 +227,8 @@ function App() {
     
     setIsLoading(true);
     setLoadingMessage('loadingMessageApplyingFilters');
-
-    // 1. Filtering
+    
+    // 1. User Filtering (label, type, edge)
     const hasActiveFilters = labelFilter.trim() !== '' || typeFilters.size > 0 || edgeLabelFilter.trim() !== '';
 
     const filteredNodesSource = hasActiveFilters
@@ -225,21 +248,32 @@ function App() {
         })
       : graphElements.edges;
 
-    // After filtering edges, some nodes might become disconnected. Let's re-filter nodes to only include those that are part of a visible edge.
+    // 2. Prune orphan nodes after edge filtering
     const nodesInVisibleEdges = new Set<string>();
     filteredEdgesSource.forEach(edge => {
         nodesInVisibleEdges.add(edge.source);
         nodesInVisibleEdges.add(edge.target);
     });
 
-    // If there is an edge filter, we only show nodes that are part of the filtered edges.
-    // If there isn't an edge filter, we show all nodes that matched the node filters.
-    const finalFilteredNodes = edgeLabelFilter.trim() !== ''
+    const intermediateNodes = edgeLabelFilter.trim() !== ''
         ? filteredNodesSource.filter(node => nodesInVisibleEdges.has(node.id))
         : filteredNodesSource;
 
+    // 3. Collapse Filtering
+    const hiddenByCollapse = new Set<string>();
+    collapsedNodeIds.forEach(collapsedId => {
+      const descendants = getAllDescendants(collapsedId, graphElements.edges);
+      descendants.forEach(id => hiddenByCollapse.add(id));
+    });
 
-    if (finalFilteredNodes.length === 0 && hasActiveFilters) {
+    const finalFilteredNodes = intermediateNodes.filter(node => !hiddenByCollapse.has(node.id));
+    
+    const finalVisibleNodeIds = new Set(finalFilteredNodes.map(n => n.id));
+    const finalFilteredEdges = filteredEdgesSource.filter(
+      edge => finalVisibleNodeIds.has(edge.source) && finalVisibleNodeIds.has(edge.target)
+    );
+
+    if (finalFilteredNodes.length === 0 && (hasActiveFilters || collapsedNodeIds.size > 0)) {
         setNodes([]);
         setEdges([]);
         setIsLoading(false);
@@ -247,15 +281,20 @@ function App() {
         return;
     }
 
-    // 2. Layouting (using the filtered elements)
+    // 4. Layouting
     const direction = layout.startsWith('LR') ? 'LR' : layout.startsWith('RL') ? 'RL' : layout.startsWith('BT') ? 'BT' : 'TB';
       
     const copiedNodes = JSON.parse(JSON.stringify(finalFilteredNodes));
-    const copiedEdges = JSON.parse(JSON.stringify(filteredEdgesSource));
+    const copiedEdges = JSON.parse(JSON.stringify(finalFilteredEdges));
       
     const nodesWithLayoutData = copiedNodes.map((node: Node) => ({
       ...node,
-      data: { ...node.data, layoutDirection: direction }
+      data: { 
+        ...node.data,
+        layoutDirection: direction,
+        isCollapsed: collapsedNodeIds.has(node.id),
+        onToggle: handleNodeToggle,
+      }
     }));
       
     const edgesWithUpdatedType = copiedEdges.map((edge: Edge) => ({
@@ -268,12 +307,13 @@ function App() {
       edgesWithUpdatedType,
       direction
     );
+
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
     setIsLoading(false);
     setLoadingMessage('');
 
-  }, [graphElements, layout, labelFilter, typeFilters, edgeLabelFilter, setNodes, setEdges]);
+  }, [graphElements, layout, labelFilter, typeFilters, edgeLabelFilter, collapsedNodeIds, setNodes, setEdges, getAllDescendants]);
 
 
   // --- Data Processing Callbacks ---
@@ -315,14 +355,22 @@ function App() {
         }
     });
     
-    const nodes = Array.from(nodeMap.values());
+    const sourceIds = new Set(initialEdges.map(e => e.source));
+    const nodes = Array.from(nodeMap.values()).map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        hasChildren: sourceIds.has(node.id),
+      },
+    }));
+
     const edges = breakCycles(nodes, initialEdges);
 
     return { nodes, edges };
   };
 
   const processGraphData = (data: GraphJsonData): { nodes: Node[], edges: Edge[] } => {
-    const initialNodes: Node[] = data.result.nodes.map(node => ({
+    const initialNodesSource = data.result.nodes.map(node => ({
         id: node.id,
         type: 'custom',
         data: { label: node.label, type: node.type || 'default' },
@@ -340,6 +388,15 @@ function App() {
         labelStyle: { fill: '#E2E8F0', fontSize: 12 },
         labelBgStyle: { fill: '#2D3748' },
     }));
+    
+    const sourceIds = new Set(initialEdges.map(e => e.source));
+    const initialNodes = initialNodesSource.map(node => ({
+        ...node,
+        data: {
+            ...node.data,
+            hasChildren: sourceIds.has(node.id),
+        },
+    }));
 
     const edges = breakCycles(initialNodes, initialEdges);
 
@@ -350,8 +407,17 @@ function App() {
     setError(null);
     setGraphElements(null);
     try {
-      const parsedJson = JSON.parse(jsonString);
+      let parsedJson = JSON.parse(jsonString);
       let finalJsonToStore = jsonString;
+
+      // Fix: Handle cases where the AI returns a raw JSON array instead of an
+      // object. This makes the app more robust by wrapping the array in the
+      // expected structure.
+      if (Array.isArray(parsedJson)) {
+        parsedJson = { triplets: parsedJson };
+        // Update the string to be stored in history to the corrected format.
+        finalJsonToStore = JSON.stringify(parsedJson, null, 2);
+      }
       
       if ('result' in parsedJson) {
         const graphData: GraphJsonData = GraphJsonDataSchema.parse(parsedJson);
@@ -377,6 +443,7 @@ function App() {
       setEdgeLabelFilter('');
       setTypeFilters(new Set());
       setSelectedNodeIds([]);
+      setCollapsedNodeIds(new Set());
       return finalJsonToStore;
     } catch (e) {
       let errorMessage = 'An unknown error occurred.';
@@ -482,6 +549,7 @@ function App() {
       setEdgeLabelFilter('');
       setTypeFilters(new Set());
       setSelectedNodeIds([]);
+      setCollapsedNodeIds(new Set());
   }, []);
 
   const handleSelectionChange = useCallback(({ nodes }: { nodes: Node[] }) => {
@@ -501,6 +569,18 @@ function App() {
       setGraphElements({ nodes: remainingNodes, edges: remainingEdges });
       setSelectedNodeIds([]);
   }, [selectedNodeIds, graphElements]);
+    
+  const handleNodeToggle = useCallback((nodeId: string) => {
+    setCollapsedNodeIds(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(nodeId)) {
+            newSet.delete(nodeId);
+        } else {
+            newSet.add(nodeId);
+        }
+        return newSet;
+    });
+  }, []);
 
   const reactFlowInstance = useMemo(() => (
     <ReactFlow
