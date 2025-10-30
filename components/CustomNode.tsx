@@ -28,7 +28,7 @@ const ChevronIcon = ({ isCollapsed }: { isCollapsed: boolean }) => (
 );
 
 const QuoteIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2H4c-1.25 0-2 .75-2 2v6c0 7 4 8 7 8Z"></path>
         <path d="M14 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2h-4c-1.25 0-2 .75-2 2v6c0 7 4 8 7 8Z"></path>
     </svg>
@@ -76,7 +76,7 @@ export const CustomNode: React.FC<NodeProps> = memo(({ id, data }) => {
   }
 
   const handleTrace = () => {
-    if (data.onTrace) {
+    if (data.onTrace && !data.isDimmed) {
         data.onTrace(data);
     }
   };
@@ -103,7 +103,7 @@ export const CustomNode: React.FC<NodeProps> = memo(({ id, data }) => {
       <Handle type="target" position={targetPosition} className="!bg-gray-500" />
       <div
         onClick={handleTrace}
-        className={`relative px-4 py-2 shadow-md rounded-md border-2 text-white ${colorClass} whitespace-normal break-words ${data.source_quote || data.source_lines ? 'cursor-pointer' : ''}`}
+        className={`relative px-4 py-2 shadow-md rounded-md border-2 text-white ${colorClass} whitespace-normal break-words ${(data.source_quote || data.source_lines) && !data.isDimmed ? 'cursor-pointer' : ''}`}
         style={{ width: `${NODE_WIDTH}px` }}
       >
         {data.hasChildren && (

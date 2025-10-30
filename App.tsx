@@ -1,16 +1,16 @@
 
-
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
   useEdgesState,
   Background,
   Controls,
-  MiniMap,
   Node,
   Edge,
   MarkerType,
   Position,
+  NodeMouseHandler,
+  ReactFlowInstance,
 } from 'reactflow';
 import * as pdfjsLib from 'pdfjs-dist';
 import { ZodError } from 'zod';
@@ -110,18 +110,18 @@ const CloseIcon = () => (
   </svg>
 );
 
-const getEdgeStyle = (edge: GraphEdge) => {
-    const styles = {
-        color: '#A0AEC0',
+const getEdgeStyle = (edge: Partial<GraphEdge>) => {
+    const styles: React.CSSProperties = {
+        stroke: '#A0AEC0',
         strokeWidth: 2,
         strokeDasharray: 'none',
     };
 
     // Color based on nature
     if (edge.nature === 'positiva') {
-        styles.color = '#48BB78'; // green
+        styles.stroke = '#48BB78'; // green
     } else if (edge.nature === 'negativa') {
-        styles.color = '#F56565'; // red
+        styles.stroke = '#F56565'; // red
     }
 
     // Thickness and style based on strength
@@ -192,7 +192,7 @@ function App() {
   const [labelFilter, setLabelFilter] = useState<string>('');
   const [edgeLabelFilter, setEdgeLabelFilter] = useState<string>('');
   const [typeFilters, setTypeFilters] = useState<Set<string>>(new Set());
-  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [selectedNodeIdsForActions, setSelectedNodeIdsForActions] = useState<string[]>([]);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(new Set());
   const [activeTrace, setActiveTrace] = useState<GraphNode | null>(null);
   const [preprocessedText, setPreprocessedText] = useState<string | null>(null);
@@ -202,6 +202,8 @@ function App() {
   const [drawerWidth, setDrawerWidth] = useState(window.innerWidth / 3);
   const drawerRef = useRef<HTMLDivElement>(null);
   const [isControlDrawerOpen, setIsControlDrawerOpen] = useState(true);
+  
+  const [highlightedNode, setHighlightedNode] = useState<string | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -327,34 +329,29 @@ function App() {
     return descendants;
   }, []);
 
-  useEffect(() => {
+  const baseGraphElements = useMemo(() => {
     if (!graphElements) {
-      setNodes([]);
-      setEdges([]);
-      return;
+        return { nodes: [], edges: [] };
     }
-    
-    setIsLoading(true);
-    setLoadingMessage('loadingMessageApplyingFilters');
-    
+
     const hasActiveFilters = labelFilter.trim() !== '' || typeFilters.size > 0 || edgeLabelFilter.trim() !== '';
 
     const filteredNodesSource = hasActiveFilters
-      ? graphElements.nodes.filter(node => {
-          const labelMatch = labelFilter.trim() === '' || node.data.label.toLowerCase().includes(labelFilter.trim().toLowerCase());
-          const typeMatch = typeFilters.size === 0 || typeFilters.has(node.data.type);
-          return labelMatch && typeMatch;
+        ? graphElements.nodes.filter(node => {
+            const labelMatch = labelFilter.trim() === '' || node.data.label.toLowerCase().includes(labelFilter.trim().toLowerCase());
+            const typeMatch = typeFilters.size === 0 || typeFilters.has(node.data.type);
+            return labelMatch && typeMatch;
         })
-      : graphElements.nodes;
+        : graphElements.nodes;
 
     const visibleNodeIds = new Set(filteredNodesSource.map(n => n.id));
 
     const filteredEdgesSource = hasActiveFilters
-      ? graphElements.edges.filter(edge => {
+        ? graphElements.edges.filter(edge => {
             const edgeLabelMatch = edgeLabelFilter.trim() === '' || (edge.label && typeof edge.label === 'string' && edge.label.toLowerCase().includes(edgeLabelFilter.trim().toLowerCase()));
             return visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target) && edgeLabelMatch;
         })
-      : graphElements.edges;
+        : graphElements.edges;
 
     const nodesInVisibleEdges = new Set<string>();
     filteredEdgesSource.forEach(edge => {
@@ -368,61 +365,124 @@ function App() {
 
     const hiddenByCollapse = new Set<string>();
     collapsedNodeIds.forEach(collapsedId => {
-      const descendants = getAllDescendants(collapsedId, graphElements.edges);
-      descendants.forEach(id => hiddenByCollapse.add(id));
+        const descendants = getAllDescendants(collapsedId, graphElements.edges);
+        descendants.forEach(id => hiddenByCollapse.add(id));
     });
 
     const finalFilteredNodes = intermediateNodes.filter(node => !hiddenByCollapse.has(node.id));
     
     const finalVisibleNodeIds = new Set(finalFilteredNodes.map(n => n.id));
     const finalFilteredEdges = filteredEdgesSource.filter(
-      edge => finalVisibleNodeIds.has(edge.source) && finalVisibleNodeIds.has(edge.target)
+        edge => finalVisibleNodeIds.has(edge.source) && finalVisibleNodeIds.has(edge.target)
     );
 
     if (finalFilteredNodes.length === 0 && (hasActiveFilters || collapsedNodeIds.size > 0)) {
+        return { nodes: [], edges: [] };
+    }
+
+    return { nodes: finalFilteredNodes, edges: finalFilteredEdges };
+
+  }, [graphElements, labelFilter, typeFilters, edgeLabelFilter, collapsedNodeIds, getAllDescendants]);
+  
+  const displayedGraphElements = useMemo(() => {
+    const { nodes: baseNodes, edges: baseEdges } = baseGraphElements;
+
+    if (!highlightedNode) {
+        return { nodes: baseNodes, edges: baseEdges };
+    }
+
+    const neighborIds = new Set<string>();
+    const highlightedEdgeIds = new Set<string>();
+
+    graphElements?.edges.forEach(edge => {
+        if (edge.source === highlightedNode) {
+            neighborIds.add(edge.target);
+            highlightedEdgeIds.add(edge.id);
+        } else if (edge.target === highlightedNode) {
+            neighborIds.add(edge.source);
+            highlightedEdgeIds.add(edge.id);
+        }
+    });
+
+    const displayedNodes = baseNodes.map(n => {
+        const isHighlighted = n.id === highlightedNode;
+        const isNeighbor = neighborIds.has(n.id);
+        const isDimmed = !isHighlighted && !isNeighbor;
+        
+        return {
+            ...n,
+            className: `${n.className || ''} ${isDimmed ? 'opacity-20' : ''} ${isHighlighted ? 'border-cyan-400' : ''} ${isNeighbor ? 'border-white' : ''} transition-all duration-300`,
+            data: {
+                ...n.data,
+                isDimmed,
+            }
+        };
+    });
+
+    const displayedEdges = baseEdges.map(e => {
+        const isHighlighted = highlightedEdgeIds.has(e.id);
+        return {
+            ...e,
+            style: {
+                ...e.style,
+                opacity: isHighlighted ? 1 : 0.2,
+                strokeWidth: isHighlighted ? 3 : e.style?.strokeWidth,
+            },
+            className: 'transition-all duration-300',
+        };
+    });
+
+    return { nodes: displayedNodes, edges: displayedEdges };
+
+  }, [baseGraphElements, highlightedNode, graphElements]);
+
+
+  useEffect(() => {
+    if (baseGraphElements.nodes.length === 0 && (labelFilter.trim() !== '' || typeFilters.size > 0 || edgeLabelFilter.trim() !== '' || collapsedNodeIds.size > 0)) {
         setNodes([]);
         setEdges([]);
-        setIsLoading(false);
-        setLoadingMessage('');
         return;
     }
 
-    const direction = layout.startsWith('LR') ? 'LR' : layout.startsWith('RL') ? 'RL' : layout.startsWith('BT') ? 'BT' : 'TB';
-      
-    const copiedNodes = JSON.parse(JSON.stringify(finalFilteredNodes));
-    const copiedEdges = JSON.parse(JSON.stringify(finalFilteredEdges));
-      
-    const nodesWithLayoutData = copiedNodes.map((node: Node<GraphNode>) => ({
-      ...node,
-      data: { 
-        ...node.data,
-        layoutDirection: direction,
-        isCollapsed: collapsedNodeIds.has(node.id),
-        onToggle: handleNodeToggle,
-        onTrace: handleNodeTrace,
-        onUngroup: handleUngroupNode,
-        ungroupLabel: t('ungroupButton'),
-      }
-    }));
-      
-    const edgesWithUpdatedType = copiedEdges.map((edge: Edge) => ({
-      ...edge,
-      type: layout === 'LR_CURVED' ? 'default' : 'smoothstep',
-    }));
+    if (baseGraphElements.nodes.length > 0) {
+        setIsLoading(true);
+        setLoadingMessage('loadingMessageApplyingFilters');
 
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      nodesWithLayoutData,
-      edgesWithUpdatedType,
-      direction
-    );
+        const direction = layout.startsWith('LR') ? 'LR' : layout.startsWith('RL') ? 'RL' : layout.startsWith('BT') ? 'BT' : 'TB';
+        
+        const copiedNodes = JSON.parse(JSON.stringify(displayedGraphElements.nodes));
+        const copiedEdges = JSON.parse(JSON.stringify(displayedGraphElements.edges));
+        
+        const nodesWithLayoutData = copiedNodes.map((node: Node<GraphNode>) => ({
+            ...node,
+            data: { 
+                ...node.data,
+                layoutDirection: direction,
+                isCollapsed: collapsedNodeIds.has(node.id),
+                onToggle: handleNodeToggle,
+                onTrace: handleNodeTrace,
+                onUngroup: handleUngroupNode,
+                ungroupLabel: t('ungroupButton'),
+            }
+        }));
+        
+        const edgesWithUpdatedType = copiedEdges.map((edge: Edge) => ({
+            ...edge,
+            type: layout === 'LR_CURVED' ? 'default' : 'smoothstep',
+        }));
 
-    setNodes(layoutedNodes);
-    setEdges(layoutedEdges);
-    setIsLoading(false);
-    setLoadingMessage('');
+        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+            nodesWithLayoutData,
+            edgesWithUpdatedType,
+            direction
+        );
 
-  }, [graphElements, layout, labelFilter, typeFilters, edgeLabelFilter, collapsedNodeIds, setNodes, setEdges, getAllDescendants, t]);
-
+        setNodes(layoutedNodes);
+        setEdges(layoutedEdges);
+        setIsLoading(false);
+        setLoadingMessage('');
+    }
+  }, [displayedGraphElements, layout, setNodes, setEdges, collapsedNodeIds, t]);
     
   const processTriplets = (data: TripletJsonData): { nodes: Node<GraphNode>[], edges: Edge[] } => {
     const triplets = data.triplets;
@@ -459,14 +519,15 @@ function App() {
             });
         }
         if (triplet.s?.label && triplet.o?.label && triplet.p) {
+            const edgeStyle = getEdgeStyle({});
             initialEdges.push({
                 id: `e-${index}-${triplet.s.label}-${triplet.o.label}`,
                 source: triplet.s.label,
                 target: triplet.o.label,
                 label: triplet.p,
                 type: 'smoothstep',
-                markerEnd: { type: MarkerType.ArrowClosed, color: '#A0AEC0' },
-                style: { stroke: '#A0AEC0', strokeWidth: 2 },
+                markerEnd: { type: MarkerType.ArrowClosed, color: edgeStyle.stroke as string },
+                style: edgeStyle,
                 labelStyle: { fill: '#E2E8F0', fontSize: 12 },
                 labelBgStyle: { fill: '#2D3748' },
             });
@@ -502,15 +563,15 @@ function App() {
     }));
 
     const initialEdges: Edge[] = data.result.edges.map(edge => {
-        const { color, strokeWidth, strokeDasharray } = getEdgeStyle(edge);
+        const edgeStyle = getEdgeStyle(edge);
         return {
             id: edge.id,
             source: edge.source,
             target: edge.target,
             label: edge.label,
             type: 'smoothstep',
-            markerEnd: { type: MarkerType.ArrowClosed, color },
-            style: { stroke: color, strokeWidth, strokeDasharray },
+            markerEnd: { type: MarkerType.ArrowClosed, color: edgeStyle.stroke as string },
+            style: edgeStyle,
             labelStyle: { fill: '#E2E8F0', fontSize: 12 },
             labelBgStyle: { fill: '#2D3748' },
         };
@@ -594,9 +655,10 @@ function App() {
       setLabelFilter('');
       setEdgeLabelFilter('');
       setTypeFilters(new Set());
-      setSelectedNodeIds([]);
+      setSelectedNodeIdsForActions([]);
       setCollapsedNodeIds(new Set());
       setActiveTrace(null);
+      setHighlightedNode(null);
       return finalJsonToStore;
     } catch (e) {
       let errorMessage = 'An unknown error occurred.';
@@ -616,17 +678,17 @@ function App() {
   }, [t]);
   
   const canCollapseSelected = useMemo(() => {
-    if (!graphElements || selectedNodeIds.length === 0) return false;
-    return selectedNodeIds.some(id => {
+    if (!graphElements || selectedNodeIdsForActions.length === 0) return false;
+    return selectedNodeIdsForActions.some(id => {
         const node = graphElements.nodes.find(n => n.id === id);
         return node?.data.hasChildren;
     });
-  }, [selectedNodeIds, graphElements]);
+  }, [selectedNodeIdsForActions, graphElements]);
 
   const canExpandSelected = useMemo(() => {
-    if (selectedNodeIds.length === 0 || collapsedNodeIds.size === 0) return false;
-    return selectedNodeIds.some(id => collapsedNodeIds.has(id));
-  }, [selectedNodeIds, collapsedNodeIds]);
+    if (selectedNodeIdsForActions.length === 0 || collapsedNodeIds.size === 0) return false;
+    return selectedNodeIdsForActions.some(id => collapsedNodeIds.has(id));
+  }, [selectedNodeIdsForActions, collapsedNodeIds]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -723,18 +785,18 @@ function App() {
       setLabelFilter('');
       setEdgeLabelFilter('');
       setTypeFilters(new Set());
-      setSelectedNodeIds([]);
+      setSelectedNodeIdsForActions([]);
       setCollapsedNodeIds(new Set());
   }, []);
 
   const handleSelectionChange = useCallback(({ nodes }: { nodes: Node[] }) => {
-    setSelectedNodeIds(nodes.map(n => n.id));
+    setSelectedNodeIdsForActions(nodes.map(n => n.id));
   }, []);
 
   const handleDeleteSelectedNodes = useCallback(() => {
       if (!graphElements) return;
 
-      const selectedIdsSet = new Set(selectedNodeIds);
+      const selectedIdsSet = new Set(selectedNodeIdsForActions);
 
       const remainingNodes = graphElements.nodes.filter(n => !selectedIdsSet.has(n.id));
       const remainingEdges = graphElements.edges.filter(
@@ -742,14 +804,14 @@ function App() {
       );
 
       setGraphElements({ nodes: remainingNodes, edges: remainingEdges });
-      setSelectedNodeIds([]);
-  }, [selectedNodeIds, graphElements]);
+      setSelectedNodeIdsForActions([]);
+  }, [selectedNodeIdsForActions, graphElements]);
     
   const handleCollapseSelectedNodes = useCallback(() => {
     if (!graphElements) return;
     setCollapsedNodeIds(prev => {
         const newSet = new Set(prev);
-        selectedNodeIds.forEach(id => {
+        selectedNodeIdsForActions.forEach(id => {
             const node = graphElements.nodes.find(n => n.id === id);
             if (node?.data.hasChildren) {
                 newSet.add(id);
@@ -757,25 +819,25 @@ function App() {
         });
         return newSet;
     });
-  }, [selectedNodeIds, graphElements]);
+  }, [selectedNodeIdsForActions, graphElements]);
 
   const handleExpandSelectedNodes = useCallback(() => {
     setCollapsedNodeIds(prev => {
         const newSet = new Set(prev);
-        selectedNodeIds.forEach(id => {
+        selectedNodeIdsForActions.forEach(id => {
             newSet.delete(id);
         });
         return newSet;
     });
-  }, [selectedNodeIds]);
+  }, [selectedNodeIdsForActions]);
 
   const handleGroupSelectedNodes = useCallback(() => {
-    if (selectedNodeIds.length < 2 || !graphElements) return;
+    if (selectedNodeIdsForActions.length < 2 || !graphElements) return;
     const groupName = window.prompt(t('groupNamePrompt'));
     if (!groupName) return;
 
     const groupId = `group-${Date.now()}`;
-    const selectedNodes = graphElements.nodes.filter(n => selectedNodeIds.includes(n.id));
+    const selectedNodes = graphElements.nodes.filter(n => selectedNodeIdsForActions.includes(n.id));
     
     // Simple average position for the new group node
     const avgX = selectedNodes.reduce((sum, n) => sum + (n.position?.x || 0), 0) / selectedNodes.length;
@@ -800,7 +862,7 @@ function App() {
     };
 
     const updatedNodes = graphElements.nodes.map(n => {
-      if (selectedNodeIds.includes(n.id)) {
+      if (selectedNodeIdsForActions.includes(n.id)) {
         return { ...n, parentNode: groupId, extent: 'parent' as const };
       }
       return n;
@@ -810,8 +872,8 @@ function App() {
         ...prev!,
         nodes: [...updatedNodes, groupNode]
     }));
-    setSelectedNodeIds([]);
-  }, [selectedNodeIds, graphElements, t]);
+    setSelectedNodeIdsForActions([]);
+  }, [selectedNodeIdsForActions, graphElements, t]);
 
   const handleUngroupNode = useCallback((groupId: string) => {
     if (!graphElements) return;
@@ -882,6 +944,15 @@ function App() {
           </>
       );
   };
+  
+  const onNodeClick: NodeMouseHandler = useCallback((event, node) => {
+    setHighlightedNode(node.id);
+  }, []);
+
+  const onPaneClick = useCallback(() => {
+    setHighlightedNode(null);
+  }, []);
+
 
   const reactFlowInstance = useMemo(() => (
     <ReactFlow
@@ -890,6 +961,8 @@ function App() {
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onSelectionChange={handleSelectionChange}
+      onNodeClick={onNodeClick}
+      onPaneClick={onPaneClick}
       nodeTypes={nodeTypes}
       fitView
       className="bg-gray-800"
@@ -898,10 +971,9 @@ function App() {
     >
       <Background color="#4A5568" gap={16} />
       <Controls />
-      <MiniMap nodeStrokeWidth={3} zoomable pannable />
       {graphElements && graphElements.edges.length > 0 && <EdgeLegend />}
     </ReactFlow>
-  ), [nodes, edges, onNodesChange, onEdgesChange, handleSelectionChange, graphElements]);
+  ), [nodes, edges, onNodesChange, onEdgesChange, handleSelectionChange, onNodeClick, onPaneClick, graphElements]);
 
   return (
     <div className="h-screen font-sans text-white bg-gray-900 relative overflow-hidden">
@@ -1130,10 +1202,10 @@ function App() {
                 </div>
             </div>
 
-            {selectedNodeIds.length > 0 && (
+            {selectedNodeIdsForActions.length > 0 && (
                 <div className="mt-6 pt-4 border-t border-gray-700">
                     <h2 className="text-sm font-medium text-gray-300 mb-3">
-                        {t('bulkActionsTitle', { count: selectedNodeIds.length })}
+                        {t('bulkActionsTitle', { count: selectedNodeIdsForActions.length })}
                     </h2>
                     <div className="flex flex-col gap-2">
                          <button
@@ -1152,7 +1224,7 @@ function App() {
                         </button>
                         <button
                             onClick={handleGroupSelectedNodes}
-                            disabled={selectedNodeIds.length < 2}
+                            disabled={selectedNodeIdsForActions.length < 2}
                             className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
                         >
                             {t('groupSelectedButton')}
