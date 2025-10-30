@@ -10,7 +10,9 @@ export const pt = {
   selectFileButton: "Clique para selecionar um arquivo",
   selectedFile: "Selecionado: {{filename}}",
   promptLabel: "Prompt",
-  promptPlaceholder: "Digite seu prompt aqui...",
+  promptPlaceholder: "Selecione um modelo de prompt ou cole o seu aqui...",
+  selectPromptLabel: "Modelo de Prompt",
+  selectPromptPlaceholder: "Selecione um modelo para começar...",
   generateWithAIButton: "Gerar com IA",
   stopGeneratingButton: "Parar Geração",
   pasteJsonLabel: "Cole seu JSON aqui:",
@@ -44,56 +46,6 @@ export const pt = {
   layoutLR_CURVED: "Esquerda para Direita (Curvo)",
   traceabilityDrawerTitle: "Origem do Texto",
   traceabilityDrawerEmpty: "Nenhuma citação de origem disponível para este nó.",
-  defaultGeminiPrompt: `Você é um especialista em **Análise Crítica de Artigos Científicos** e Engenharia do Conhecimento, com foco em PNL Biomédica.
-
-Sua tarefa é ler o texto fornecido e extrair as **principais** relações semânticas e causais **que representam os achados e conclusões DESTE ARTIGO**.
-
-O formato da sua saída deve ser um único array JSON de fatos.
-CADA fato deve ter a estrutura:
-{
-  "s": { "label": "Nome da Entidade", "type": "Tipo da Entidade" },
-  "p": "Relação (Predicado)",
-  "o": { "label": "Nome da Entidade", "type": "Tipo da Entidade" },
-  "source_quote": "A sentença exata do texto original que justifica este fato."
-}
-
----
-### REGRAS DE EXTRAÇÃO E PRIORIZAÇÃO
-
-1.  **CITAÇÃO DE ORIGEM É OBRIGATÓRIA:** Para cada fato extraído, você DEVE incluir o campo \`source_quote\`. A citação deve ser a sentença exata e não modificada do texto original que contém a informação para o fato.
-2.  **FOCO NOS ACHADOS:** Dê prioridade máxima aos fatos extraídos das seções de **Resultados**, **Discussão** e **Conclusões** do texto.
-3.  **MANUSEIO DO CONTEXTO (INTRODUÇÃO):** Fatos da **Introdução** ou **Histórico** só devem ser extraídos se forem definições gerais (ex: "ICFEp é...") ou fatos de conhecimento comum que *contextualizam* o estudo.
-4.  **REGRA DA CONTRADIÇÃO (A MAIS IMPORTANTE):** Se a Introdução menciona um fato sobre um grupo (ex: "Droga X reduz o risco em *Pacientes A*") e os Resultados/Conclusão do estudo atual encontram o oposto para o seu grupo de estudo (ex: "Droga X *aumenta* o risco em *Pacientes B*"), **VOCÊ DEVE PRIORIZAR E EXTRAIR O ACHADO DO ESTUDO ATUAL** (o risco aumentado no Paciente B) e **IGNORAR** o fato da introdução.
-
----
-### Tipos de Entidade Permitidos:
-- "mainConcept"
-- "riskFactor"
-- "comorbidity"
-- "mechanism"
-- "insight"
-- "comparison"
-- "diagnostic"
-- "detail"
-- "treatment"
-- "drug"
-- "population"
-- "statistic"
-
----
-### EXEMPLO DE EXTRAÇÃO (com Priorização):
-
-* **Texto (Resultados):** "Em nosso estudo, a Droga A não melhorou a sobrevida na População Y (HR 1.05)."
-* **Extração Correta:**
-    \`\`\`json
-    {
-      "s": { "label": "Droga A", "type": "drug" },
-      "p": "não melhorou",
-      "o": { "label": "sobrevida na População Y (HR 1.05)", "type": "insight" },
-      "source_quote": "Em nosso estudo, a Droga A não melhorou a sobrevida na População Y (HR 1.05)."
-    }
-    \`\`\`
-`
 };
 
 export const en = {
@@ -108,7 +60,9 @@ export const en = {
   selectFileButton: "Click to select a file",
   selectedFile: "Selected: {{filename}}",
   promptLabel: "Prompt",
-  promptPlaceholder: "Enter your prompt here...",
+  promptPlaceholder: "Select a prompt template or paste your own here...",
+  selectPromptLabel: "Prompt Template",
+  selectPromptPlaceholder: "Select a template to start...",
   generateWithAIButton: "Generate with AI",
   stopGeneratingButton: "Stop Generating",
   pasteJsonLabel: "Paste your JSON here:",
@@ -142,54 +96,4 @@ export const en = {
   layoutLR_CURVED: "Left to Right (Curved)",
   traceabilityDrawerTitle: "Text Origin",
   traceabilityDrawerEmpty: "No source quote available for this node.",
-  defaultGeminiPrompt: `You are an expert in **Critical Analysis of Scientific Papers** and Knowledge Engineering, focused on Biomedical NLP.
-
-Your task is to read the provided text and extract the **main** semantic and causal relationships **that represent the findings and conclusions of THIS ARTICLE**.
-
-The format of your output must be a single JSON array of facts.
-EACH fact must have the structure:
-{
-  "s": { "label": "Entity Name", "type": "Entity Type" },
-  "p": "Relationship (Predicate)",
-  "o": { "label": "Entity Name", "type": "Entity Type" },
-  "source_quote": "The exact sentence from the original text that justifies this fact."
-}
-
----
-### EXTRACTION AND PRIORITIZATION RULES
-
-1.  **SOURCE QUOTE IS MANDATORY:** For every triplet you extract, you MUST include the \`source_quote\` field. The quote must be the exact, unmodified sentence from the source text that contains the information for the triplet.
-2.  **FOCUS ON FINDINGS:** Give maximum priority to facts extracted from the **Results**, **Discussion**, and **Conclusions** sections of the text.
-3.  **CONTEXT HANDLING (BACKGROUND):** Facts from the **Introduction** or **Background** should only be extracted if they are general definitions (e.g., "HFpEF is...") or common knowledge facts that *contextualize* the study.
-4.  **CONTRADICTION RULE (THE MOST IMPORTANT):** If the Background mentions a fact about a group (e.g., "Drug X reduces risk in *Patients A*") and the current study's Results/Conclusion find the opposite for its study group (e.g., "Drug X *increases* risk in *Patients B*"), **YOU MUST PRIORITIZE AND EXTRACT THE CURRENT STUDY'S FINDING** (the increased risk in Patient B) and **IGNORE** the background fact.
-
----
-### Allowed Entity Types:
-- "mainConcept"
-- "riskFactor"
-- "comorbidity"
-- "mechanism"
-- "insight"
-- "comparison"
-- "diagnostic"
-- "detail"
-- "treatment"
-- "drug"
-- "population"
-- "statistic"
-
----
-### EXTRACTION EXAMPLE (with Prioritization):
-
-* **Text (Results):** "In our study, Drug A did not improve survival in Population Y (HR 1.05)."
-* **Correct Extraction:**
-    \`\`\`json
-    {
-      "s": { "label": "Drug A", "type": "drug" },
-      "p": "did not improve",
-      "o": { "label": "survival in Population Y (HR 1.05)", "type": "insight" },
-      "source_quote": "In our study, Drug A did not improve survival in Population Y (HR 1.05)."
-    }
-    \`\`\`
-`
 };

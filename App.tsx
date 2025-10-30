@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -20,7 +22,7 @@ import { marked } from 'marked';
 import { getLayoutedElements } from './utils/layout';
 import { TripletJsonDataSchema, KnowledgeBaseJsonDataSchema, GraphJsonDataSchema } from './utils/schema';
 import { TripletJsonData, KnowledgeBaseJsonData, Triplet, HistoryItem, KnowledgeBaseConcept, GraphJsonData } from './types';
-import { DEFAULT_JSON_DATA, GEMINI_MODELS, NODE_TYPE_COLORS, LAYOUTS } from './constants';
+import { DEFAULT_JSON_DATA, GEMINI_MODELS, NODE_TYPE_COLORS, LAYOUTS, PROMPT_TEMPLATES } from './constants';
 import { CustomNode } from './components/CustomNode';
 import { useI18n } from './i18n';
 import { breakCycles } from './utils/graph';
@@ -143,15 +145,12 @@ function App() {
   // State for Generation tab
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [prompt, setPrompt] = useState<string>(t('defaultGeminiPrompt'));
+  const [prompt, setPrompt] = useState<string>('');
   const [model, setModel] = useState<string>(GEMINI_MODELS[1]); // Default to flash
   const [maxConcepts, setMaxConcepts] = useState<number>(10);
   const generationCancelledRef = useRef<boolean>(false);
+  const availablePrompts = useMemo(() => PROMPT_TEMPLATES, []);
   
-  // Update prompt when language changes
-  useEffect(() => {
-    setPrompt(t('defaultGeminiPrompt'));
-  }, [language, t]);
 
   // --- Gemini API Call ---
   const generateJsonFromText = useCallback(async (finalPrompt: string, selectedModel: string): Promise<string> => {
@@ -673,6 +672,17 @@ function App() {
     }
   }, [t]);
 
+  const handlePromptSelect = (promptId: string) => {
+    if (!promptId) {
+        setPrompt('');
+        return;
+    }
+    const selected = availablePrompts.find(p => p.id === promptId);
+    if (selected) {
+        setPrompt(selected.content);
+    }
+  };
+
   const reactFlowInstance = useMemo(() => (
     <ReactFlow
       nodes={nodes}
@@ -765,6 +775,24 @@ function App() {
                             {selectedFile ? t('selectedFile', { filename: selectedFile.name }) : t('selectFileButton')}
                         </button>
                     </div>
+
+                    <div>
+                        <label htmlFor="prompt-select" className="text-sm font-medium text-gray-300 mb-2 block">
+                            {t('selectPromptLabel')}
+                        </label>
+                        <select
+                            id="prompt-select"
+                            onChange={(e) => handlePromptSelect(e.target.value)}
+                            defaultValue=""
+                            className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200"
+                        >
+                            <option value="">{t('selectPromptPlaceholder')}</option>
+                            {availablePrompts.map(p => (
+                                <option key={p.id} value={p.id}>{p.title}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     <div className="flex flex-col flex-grow">
                         <label htmlFor="prompt-input" className="text-sm font-medium text-gray-300 mb-2">
                             {t('promptLabel')}
@@ -777,7 +805,7 @@ function App() {
                         {t('stopGeneratingButton')}
                       </button>
                     ) : (
-                      <button onClick={handleFileGenerate} disabled={!selectedFile} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                      <button onClick={handleFileGenerate} disabled={!selectedFile || prompt.trim() === ''} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
                         {t('generateWithAIButton')}
                       </button>
                     )}
