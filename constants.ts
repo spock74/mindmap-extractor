@@ -1,4 +1,5 @@
 
+
 export const PROMPT_TEMPLATES = [
   {
     id: 'extracao-simples-com-rastreabilidade',
@@ -87,6 +88,8 @@ Analise o artigo e modele seu conteúdo em um formato de grafo JSON. Siga rigoro
     *   **Tipos de Nós:** Classifique cada nó com um \`type\` que descreva sua função no grafo. Isso é crucial para dar significado à visualização.
     *   **Relações (Arestas):** Use o campo \`label\` nas arestas para descrever a natureza exata da conexão entre os nós, tornando o grafo autoexplicativo.
 
+4.  **Rastreabilidade Obrigatória:** Cada nó gerado DEVE conter um campo \`source_quote\` com a sentença exata do texto original que justifica sua criação. Isso é fundamental para a auditoria e validação do conhecimento extraído.
+
 ### REGRAS DE FORMATAÇÃO PARA A SAÍDA JSON
 
 #### **Nós (\`nodes\`)**
@@ -103,6 +106,7 @@ Cada nó deve ser um objeto com:
     *   \`finding\`: Para um resultado, conclusão ou evidência empírica (ex: "Correlação Positiva Encontrada", "Hipótese Refutada").
     *   \`implication\`: Para uma consequência, desafio, aplicação prática ou direção futura (ex: "Desafio de Escalabilidade", "Potencial Terapêutico").
     *   \`example\`: Para um caso de estudo ou exemplo concreto (ex: "O caso da Penicilina", "Modelo Murino XYZ").
+*   \`source_quote\`: **(OBRIGATÓRIO)** A sentença exata e não modificada do texto original que justifica a criação deste nó.
 
 #### **Arestas (\`edges\`)**
 Cada aresta deve ser um objeto com:
@@ -126,7 +130,8 @@ Responda **estritamente em um único bloco de código JSON**, sem texto adiciona
     {
       "id": "main",
       "label": "Tópico Central do Texto",
-      "type": "mainConcept"
+      "type": "mainConcept",
+      "source_quote": "A sentença do texto que introduz o tópico central..."
     }
   ],
   "edges": [

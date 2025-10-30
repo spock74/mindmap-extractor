@@ -3,6 +3,7 @@
 
 
 
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -463,6 +464,11 @@ function App() {
       }
       
       if ('result' in parsedJson) {
+        // Pre-process to remove orphaned edges before validation
+        const nodeIds = new Set(parsedJson.result.nodes.map((n: {id: string}) => n.id));
+        parsedJson.result.edges = parsedJson.result.edges.filter((e: {source: string, target: string}) =>
+            e.source && e.target && nodeIds.has(e.source) && nodeIds.has(e.target)
+        );
         const graphData: GraphJsonData = GraphJsonDataSchema.parse(parsedJson);
         const { nodes, edges } = processGraphData(graphData);
         setGraphElements({ nodes, edges });
