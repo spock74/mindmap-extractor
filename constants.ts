@@ -1,5 +1,6 @@
 
 
+
 export const PROMPT_TEMPLATES = [
   {
     id: 'extracao-simples-com-rastreabilidade',

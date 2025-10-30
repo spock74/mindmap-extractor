@@ -96,7 +96,7 @@ export const CustomNode: React.FC<NodeProps> = memo(({ id, data }) => {
          <button
           onClick={handleCopy}
           className="absolute top-2 right-2 p-1 rounded-full cursor-pointer text-gray-400 hover:text-white hover:bg-black/20 transition-colors"
-          aria-label={isCopied ? "Copied" : "Copy node data"}
+          aria-label={isCopied ? "Copied" : "Copied"}
           title={isCopied ? "Copied!" : "Copy node data"}
         >
           {isCopied ? <CheckIcon /> : <CopyIcon />}
