@@ -115,10 +115,11 @@ function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
   
-  // State for Filtering
+  // State for Filtering and Selection
   const [labelFilter, setLabelFilter] = useState<string>('');
   const [edgeLabelFilter, setEdgeLabelFilter] = useState<string>('');
   const [typeFilters, setTypeFilters] = useState<Set<string>>(new Set());
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const availableTypes = useMemo(() => {
     if (!graphElements?.nodes) return [];
     const types = new Set<string>();
@@ -371,10 +372,11 @@ function App() {
         throw new Error("Invalid JSON structure. The root key must be 'result', 'triplets', or 'kb'.");
       }
       
-      // Reset filters when new data is loaded
+      // Reset filters and selection when new data is loaded
       setLabelFilter('');
       setEdgeLabelFilter('');
       setTypeFilters(new Set());
+      setSelectedNodeIds([]);
       return finalJsonToStore;
     } catch (e) {
       let errorMessage = 'An unknown error occurred.';
@@ -463,7 +465,7 @@ function App() {
     setHistory(prev => prev.filter(item => item.id !== id));
   }, []);
   
-    const handleTypeFilterChange = useCallback((type: string) => {
+  const handleTypeFilterChange = useCallback((type: string) => {
     setTypeFilters(prev => {
         const newSet = new Set(prev);
         if (newSet.has(type)) {
@@ -479,7 +481,26 @@ function App() {
       setLabelFilter('');
       setEdgeLabelFilter('');
       setTypeFilters(new Set());
+      setSelectedNodeIds([]);
   }, []);
+
+  const handleSelectionChange = useCallback(({ nodes }: { nodes: Node[] }) => {
+    setSelectedNodeIds(nodes.map(n => n.id));
+  }, []);
+
+  const handleDeleteSelectedNodes = useCallback(() => {
+      if (!graphElements) return;
+
+      const selectedIdsSet = new Set(selectedNodeIds);
+
+      const remainingNodes = graphElements.nodes.filter(n => !selectedIdsSet.has(n.id));
+      const remainingEdges = graphElements.edges.filter(
+          e => !selectedIdsSet.has(e.source) && !selectedIdsSet.has(e.target)
+      );
+
+      setGraphElements({ nodes: remainingNodes, edges: remainingEdges });
+      setSelectedNodeIds([]);
+  }, [selectedNodeIds, graphElements]);
 
   const reactFlowInstance = useMemo(() => (
     <ReactFlow
@@ -487,15 +508,18 @@ function App() {
       edges={edges}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
+      onSelectionChange={handleSelectionChange}
       nodeTypes={nodeTypes}
       fitView
       className="bg-gray-800"
+      multiSelectionKeyCode="Shift"
+      selectionOnDrag={true}
     >
       <Background color="#4A5568" gap={16} />
       <Controls />
       <MiniMap nodeStrokeWidth={3} zoomable pannable />
     </ReactFlow>
-  ), [nodes, edges, onNodesChange, onEdgesChange]);
+  ), [nodes, edges, onNodesChange, onEdgesChange, handleSelectionChange]);
 
   // --- Render ---
 
@@ -696,6 +720,22 @@ function App() {
                      )}
                 </div>
             </div>
+
+            {selectedNodeIds.length > 0 && (
+                <div className="mt-6 pt-4 border-t border-gray-700">
+                    <h2 className="text-sm font-medium text-gray-300 mb-3">
+                        {t('bulkActionsTitle', { count: selectedNodeIds.length })}
+                    </h2>
+                    <div className="flex flex-col gap-2">
+                        <button
+                            onClick={handleDeleteSelectedNodes}
+                            className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-red-800 hover:bg-red-700 text-white transition-colors"
+                        >
+                            {t('deleteSelectedButton')}
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
       </div>
       <main className="w-full md:w-2/3 lg:w-3/4 flex-grow min-h-0">
