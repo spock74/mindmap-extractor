@@ -56,14 +56,14 @@ Artigo:
   },
   {
     id: 'prompt-mestre-com-rastreabilidade',
-    title: 'PROMPT MESTRE P/ GRAFO DE CONHECIMENTO (v5.0)',
-    content: `# PROMPT MESTRE PARA EXTRAÇÃO DE GRAFO DE CONHECIMENTO CIENTÍFICO (v5.0)
+    title: 'PROMPT MESTRE P/ GRAFO DE CONHECIMENTO (v5.1)',
+    content: `# PROMPT MESTRE PARA EXTRAÇÃO DE GRAFO DE CONHECIMENTO CIENTÍFICO (v5.1)
 
 ## PERSONA
-Você é um Engenheiro de Ontologias e Grafos de Conhecimento. Sua missão é modelar informações complexas de textos científicos em uma estrutura de grafo JSON hierárquica, semanticamente rica e logicamente coesa, adequada para visualização de dados. O texto de entrada que você receberá foi pré-processado: cada linha é prefixada com um número (ex: "1: ...", "2: ...").
+Você é um Engenheiro de Ontologias e Grafos de Conhecimento. Sua missão é modelar informações complexas de artigo científicos em uma estrutura de grafo JSON hierárquica, semanticamente rica e logicamente coesa, adequada para visualização de dados. O texto de entrada que você receberá foi pré-processado: cada linha é prefixada com um número (ex: "1: ...", "2: ...").
 
 ## TAREFA
-Analise o artigo e modele seu conteúdo em um formato de grafo JSON. Siga rigorosamente os princípios de modelagem e as regras de formatação abaixo.
+Analise o artigo e modele seu conteúdo em um formato de grafo JSON. Siga rigorosamente os princípios de modelagem ontológicae as regras de formatação abaixo. Especial atenção deve ser dada à fidelidade factual, completude e riqueza semântica e causalidade das relações.
 
 ### PRINCÍPIOS DE MODELAGEM DO GRAFO
 
@@ -82,14 +82,14 @@ Cada nó deve ser um objeto com:
 *   \`source_lines\`: A string com os números das linhas de referência.
 
 #### **Tipos de Nós Permitidos:**
-*   \`mainConcept\`, \`category\`, \`keyConcept\`, \`process\`, \`property\`, \`method\`, \`finding\`, \`implication\`, \`example\`
+*   \`mainConcept\`, \`category\`, \`keyConcept\`, \`process\`, \`property\`, \`method\`, \`finding\`, \`implication\`, \`example\`, \`treatment\`, \`hypotheses\`, \`propedeutics\`, \`question\`, \`riskFactor\`, \`symptom\` 
 
 #### **Arestas (\`edges\`)**
 Cada aresta deve ser um objeto com:
 *   \`id\`: String única.
 *   \`source\`: O \`id\` do nó de origem.
 *   \`target\`: O \`id\` do nó de destino.
-*   \`label\`: **(Recomendado)** Uma string curta descrevendo a relação.
+*   \`label\`: **(Recomendado)** Uma string curta descrevendo a relação. São exemplos de descrição de relação: \`cause_of\`, \`caused_by\`, \`treats\`,  
 
 ## FORMATO DE SAÍDA
 Responda **estritamente em um único bloco de código JSON**.
@@ -141,7 +141,8 @@ Responda **estritamente em um único bloco de código JSON**.
 
 Artigo:
 
-{TEXTO_DE_ENTRADA}`
+{TEXTO_DE_ENTRADA}
+`
   }
 ];
 
@@ -174,7 +175,8 @@ export const DEFAULT_JSON_DATA = `{
 
 export const GEMINI_MODELS = [
   'gemini-2.5-pro',
-  'gemini-2.5-flash'
+  'gemini-2.5-flash',
+  'gemini-flash-lite-latest'
 ];
 
 export const LAYOUTS = {
@@ -185,10 +187,6 @@ export const LAYOUTS = {
   LR_CURVED: 'layoutLR_CURVED'
 };
 
-
-// Fix: Added `category` as a valid type with a corresponding color. This
-// ensures nodes from the advanced prompt are rendered correctly instead of
-// falling back to the default color.
 export const NODE_TYPE_COLORS: Record<string, string> = {
   default: 'bg-gray-700 border-gray-500',
   library: 'bg-sky-900 border-sky-600',
@@ -215,6 +213,10 @@ export const NODE_TYPE_COLORS: Record<string, string> = {
   finding: 'bg-fuchsia-800 border-fuchsia-600',
   implication: 'bg-rose-800 border-rose-600',
   example: 'bg-lime-800 border-lime-600',
+  hypotheses: 'bg-blue-800 border-blue-600',
+  propedeutics: 'bg-purple-800 border-purple-600',
+  question: 'bg-pink-800 border-pink-600',
+  symptom: 'bg-orange-800 border-orange-600',
 };
 
 export const NODE_WIDTH = 200;

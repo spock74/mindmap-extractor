@@ -1,22 +1,12 @@
 
-
-
-
 export interface S_O_Node {
   label: string;
-  // Fix: Made 'type' optional to resolve a TypeScript error. The compiler
-  // indicated that the type inferred from the Zod schema treated 'type' as
-  // optional, while this interface required it, causing a mismatch. The
-  // application code already handles this by providing a default.
   type?: string;
 }
 
 export interface Triplet {
   s: S_O_Node;
   p: string;
-  // Fix: Made 'o' optional to resolve a TypeScript error. The compiler
-  // indicated that the type inferred from the Zod schema treated 'o' as
-  // optional, while this interface required it, causing a mismatch.
   o?: S_O_Node | null;
   source_quote?: string;
   source_lines?: string;
@@ -26,7 +16,6 @@ export interface TripletJsonData {
   triplets: Triplet[];
 }
 
-// New types for Knowledge Base
 export interface RelatedConcept {
   typ: 'prerequisite' | 'co-requisite' | 'application';
   c_id: string;
@@ -44,9 +33,6 @@ export interface KnowledgeBaseConcept {
   k_nug: KnowledgeNugget[];
   p_misc: string[];
   b_lvl: string[];
-  // Fix: Made fields optional to match Zod's inferred type, which treats
-  // them as optional. This resolves a TypeScript error during assignment. The
-  // application code handles these optional values gracefully.
   c_cplx?: 'Baixa' | 'Média' | 'Alta';
   c_rel?: 'Fundamental' | 'Importante' | 'Especializado';
   k_stab?: 'Estável' | 'Emergente';
@@ -67,13 +53,18 @@ export interface HistoryItem {
   timestamp: string;
 }
 
-// New types for direct graph format from primary prompt
 export interface GraphNode {
     id: string;
     label: string;
     type: string;
     source_quote?: string;
     source_lines?: string;
+    // Added to pass down to CustomNode for UI logic
+    hasChildren?: boolean; 
+    layoutDirection?: string;
+    isCollapsed?: boolean;
+    onToggle?: (id: string) => void;
+    onTrace?: (nodeData: GraphNode) => void;
 }
 
 export interface GraphEdge {

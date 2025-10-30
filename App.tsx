@@ -11,24 +11,19 @@ import ReactFlow, {
   MarkerType,
 } from 'reactflow';
 import * as pdfjsLib from 'pdfjs-dist';
-// Fix: Use named import for ZodError.
 import { ZodError } from 'zod';
-import { marked } from 'marked';
 
 import { getLayoutedElements } from './utils/layout';
 import { TripletJsonDataSchema, KnowledgeBaseJsonDataSchema, GraphJsonDataSchema } from './utils/schema';
-import { TripletJsonData, KnowledgeBaseJsonData, Triplet, HistoryItem, KnowledgeBaseConcept, GraphJsonData } from './types';
+import { TripletJsonData, KnowledgeBaseJsonData, Triplet, HistoryItem, KnowledgeBaseConcept, GraphJsonData, GraphNode } from './types';
 import { DEFAULT_JSON_DATA, GEMINI_MODELS, NODE_TYPE_COLORS, LAYOUTS, PROMPT_TEMPLATES } from './constants';
 import { CustomNode } from './components/CustomNode';
+import { PdfViewer } from './components/PdfViewer';
 import { useI18n } from './i18n';
 import { breakCycles } from './utils/graph';
 import { preprocessText, parseLineNumbers } from './utils/text';
 
-// --- PDF Worker Setup ---
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdfjs-dist/build/pdf.worker.min.mjs';
-
-
-// --- Helper Functions ---
 
 const readFileContent = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -94,14 +89,9 @@ const transformKbToTriplets = (data: KnowledgeBaseJsonData): TripletJsonData => 
     return { triplets };
 };
 
-
-// --- React Flow Configuration ---
-
 const nodeTypes = {
   custom: CustomNode,
 };
-
-// --- Main App Component ---
 
 function App() {
   const { t, language, setLanguage } = useI18n();
@@ -109,25 +99,24 @@ function App() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [layout, setLayout] = useState<string>('LR_CURVED');
 
-  // State for inputs and data
   const [jsonInput, setJsonInput] = useState<string>(DEFAULT_JSON_DATA);
-  const [graphElements, setGraphElements] = useState<{ nodes: Node[], edges: Edge[] } | null>(null);
+  const [graphElements, setGraphElements] = useState<{ nodes: Node<GraphNode>[], edges: Edge[] } | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [activeTab, setActiveTab] = useState<'generate' | 'manual' | 'history'>('generate');
 
-  // State for UI feedback
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
   
-  // State for Filtering and Selection
   const [labelFilter, setLabelFilter] = useState<string>('');
   const [edgeLabelFilter, setEdgeLabelFilter] = useState<string>('');
   const [typeFilters, setTypeFilters] = useState<Set<string>>(new Set());
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(new Set());
-  const [activeTrace, setActiveTrace] = useState<{ label: string; quote: string; lines: string | null } | null>(null);
+  const [activeTrace, setActiveTrace] = useState<GraphNode | null>(null);
   const [preprocessedText, setPreprocessedText] = useState<string | null>(null);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  
   const availableTypes = useMemo(() => {
     if (!graphElements?.nodes) return [];
     const types = new Set<string>();
@@ -140,17 +129,15 @@ function App() {
   }, [graphElements]);
 
 
-  // State for Generation tab
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [prompt, setPrompt] = useState<string>('');
-  const [model, setModel] = useState<string>(GEMINI_MODELS[1]); // Default to flash
+  const [model, setModel] = useState<string>(GEMINI_MODELS[1]);
   const [maxConcepts, setMaxConcepts] = useState<number>(10);
   const generationCancelledRef = useRef<boolean>(false);
   const availablePrompts = useMemo(() => PROMPT_TEMPLATES, []);
   
 
-  // --- Gemini API Call ---
   const generateJsonFromText = useCallback(async (finalPrompt: string, selectedModel: string): Promise<string> => {
     if (!process.env.API_KEY) {
         throw new Error("API key is missing. Please ensure it is set in your environment variables.");
@@ -177,8 +164,6 @@ function App() {
 
     return response.text;
   }, []);
-
-  // --- Effects ---
 
   useEffect(() => {
     try {
@@ -231,7 +216,6 @@ function App() {
     setIsLoading(true);
     setLoadingMessage('loadingMessageApplyingFilters');
     
-    // 1. User Filtering (label, type, edge)
     const hasActiveFilters = labelFilter.trim() !== '' || typeFilters.size > 0 || edgeLabelFilter.trim() !== '';
 
     const filteredNodesSource = hasActiveFilters
@@ -251,7 +235,6 @@ function App() {
         })
       : graphElements.edges;
 
-    // 2. Prune orphan nodes after edge filtering
     const nodesInVisibleEdges = new Set<string>();
     filteredEdgesSource.forEach(edge => {
         nodesInVisibleEdges.add(edge.source);
@@ -262,7 +245,6 @@ function App() {
         ? filteredNodesSource.filter(node => nodesInVisibleEdges.has(node.id))
         : filteredNodesSource;
 
-    // 3. Collapse Filtering
     const hiddenByCollapse = new Set<string>();
     collapsedNodeIds.forEach(collapsedId => {
       const descendants = getAllDescendants(collapsedId, graphElements.edges);
@@ -284,13 +266,12 @@ function App() {
         return;
     }
 
-    // 4. Layouting
     const direction = layout.startsWith('LR') ? 'LR' : layout.startsWith('RL') ? 'RL' : layout.startsWith('BT') ? 'BT' : 'TB';
       
     const copiedNodes = JSON.parse(JSON.stringify(finalFilteredNodes));
     const copiedEdges = JSON.parse(JSON.stringify(finalFilteredEdges));
       
-    const nodesWithLayoutData = copiedNodes.map((node: Node) => ({
+    const nodesWithLayoutData = copiedNodes.map((node: Node<GraphNode>) => ({
       ...node,
       data: { 
         ...node.data,
@@ -319,12 +300,10 @@ function App() {
 
   }, [graphElements, layout, labelFilter, typeFilters, edgeLabelFilter, collapsedNodeIds, setNodes, setEdges, getAllDescendants]);
 
-
-  // --- Data Processing Callbacks ---
     
-  const processTriplets = (data: TripletJsonData): { nodes: Node[], edges: Edge[] } => {
+  const processTriplets = (data: TripletJsonData): { nodes: Node<GraphNode>[], edges: Edge[] } => {
     const triplets = data.triplets;
-    const nodeMap = new Map<string, Node>();
+    const nodeMap = new Map<string, Node<GraphNode>>();
     const initialEdges: Edge[] = [];
 
     triplets.forEach((triplet: Triplet, index: number) => {
@@ -333,6 +312,7 @@ function App() {
                 id: triplet.s.label,
                 type: 'custom',
                 data: { 
+                  id: triplet.s.label,
                   label: triplet.s.label, 
                   type: triplet.s.type || 'default', 
                   source_quote: triplet.source_quote,
@@ -346,6 +326,7 @@ function App() {
                 id: triplet.o.label,
                 type: 'custom',
                 data: { 
+                  id: triplet.o.label,
                   label: triplet.o.label, 
                   type: triplet.o.type || 'default', 
                   source_quote: triplet.source_quote,
@@ -383,11 +364,12 @@ function App() {
     return { nodes, edges };
   };
 
-  const processGraphData = (data: GraphJsonData): { nodes: Node[], edges: Edge[] } => {
-    const initialNodesSource = data.result.nodes.map(node => ({
+  const processGraphData = (data: GraphJsonData): { nodes: Node<GraphNode>[], edges: Edge[] } => {
+    const initialNodesSource: Node<GraphNode>[] = data.result.nodes.map(node => ({
         id: node.id,
         type: 'custom',
         data: { 
+          id: node.id,
           label: node.label, 
           type: node.type || 'default', 
           source_quote: node.source_quote,
@@ -426,10 +408,10 @@ function App() {
     setError(null);
     setGraphElements(null);
     if (!options.preservePreprocessedText) {
-      setPreprocessedText(null); // Clear preprocessed text for manual/history loads
+      setPreprocessedText(null);
+      setPdfFile(null);
     }
     try {
-      // New: Clean the string to remove potential markdown fences from AI response.
       let cleanJsonString = jsonString.trim();
       const markdownMatch = /```(?:json)?\s*([\s\S]*?)\s*```/.exec(cleanJsonString);
       if (markdownMatch) {
@@ -439,21 +421,15 @@ function App() {
       let parsedJson = JSON.parse(cleanJsonString);
       let finalJsonToStore = cleanJsonString;
 
-      // Fix: Handle cases where the AI returns a raw JSON array instead of an
-      // object. This makes the app more robust by wrapping the array in the
-      // expected structure.
       if (Array.isArray(parsedJson)) {
         parsedJson = { triplets: parsedJson };
-        // Update the string to be stored in history to the corrected format.
         finalJsonToStore = JSON.stringify(parsedJson, null, 2);
       } else if (typeof parsedJson === 'object' && parsedJson !== null && !('result' in parsedJson) && !('kb' in parsedJson) && !('triplets' in parsedJson)) {
-        // New: Add robustness for objects with a single, unknown root key containing an array.
         const keys = Object.keys(parsedJson);
         if (keys.length === 1 && Array.isArray(parsedJson[keys[0]])) {
             parsedJson = { triplets: parsedJson[keys[0]] };
             finalJsonToStore = JSON.stringify(parsedJson, null, 2);
         } else if ('nodes' in parsedJson && 'edges' in parsedJson) {
-            // New: Handle direct graph format without a 'result' key, as produced by the advanced prompt.
             const adaptedGraphData = {
                 result: {
                     title: parsedJson.title || 'Generated Graph',
@@ -467,7 +443,6 @@ function App() {
       }
       
       if ('result' in parsedJson) {
-        // Pre-process to remove orphaned edges before validation
         const nodeIds = new Set(parsedJson.result.nodes.map((n: {id: string}) => n.id));
         parsedJson.result.edges = parsedJson.result.edges.filter((e: {source: string, target: string}) =>
             e.source && e.target && nodeIds.has(e.source) && nodeIds.has(e.target)
@@ -490,7 +465,6 @@ function App() {
         throw new Error("Invalid JSON structure. The root key must be 'result', 'triplets', or 'kb'.");
       }
       
-      // Reset filters and selection when new data is loaded
       setLabelFilter('');
       setEdgeLabelFilter('');
       setTypeFilters(new Set());
@@ -500,7 +474,6 @@ function App() {
       return finalJsonToStore;
     } catch (e) {
       let errorMessage = 'An unknown error occurred.';
-      // Fix: Use ZodError directly as it's now a named import.
       if (e instanceof ZodError) {
         const formattedErrors = e.issues.map(err => `At '${err.path.join('.')}': ${err.message}`).join('\n');
         errorMessage = t('errorJsonValidation', { errors: formattedErrors });
@@ -516,7 +489,6 @@ function App() {
     }
   }, [t]);
   
-  // --- Memoized calculations for bulk actions ---
   const canCollapseSelected = useMemo(() => {
     if (!graphElements || selectedNodeIds.length === 0) return false;
     return selectedNodeIds.some(id => {
@@ -530,7 +502,15 @@ function App() {
     return selectedNodeIds.some(id => collapsedNodeIds.has(id));
   }, [selectedNodeIds, collapsedNodeIds]);
 
-  // --- Event Handlers ---
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setSelectedFile(file);
+    if (file && file.type === 'application/pdf') {
+        setPdfFile(file);
+    } else {
+        setPdfFile(null);
+    }
+  };
 
   const handleFileGenerate = async () => {
     if (!selectedFile) return;
@@ -578,8 +558,9 @@ function App() {
         const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
         setError(t('errorGenerationFailed', { error: errorMessage }));
       }
-      setIsLoading(false);
-      setLoadingMessage('');
+    } finally {
+        setIsLoading(false);
+        setLoadingMessage('');
     }
   };
   
@@ -674,21 +655,9 @@ function App() {
     });
   }, []);
     
-  const handleNodeTrace = useCallback((nodeData: { label: string; source_quote?: string; source_lines?: string }) => {
-    if (nodeData.source_quote || nodeData.source_lines) {
-        setActiveTrace({
-            label: nodeData.label,
-            quote: nodeData.source_quote || t('traceabilityDrawerEmpty'),
-            lines: nodeData.source_lines || null,
-        });
-    } else {
-         setActiveTrace({
-            label: nodeData.label,
-            quote: t('traceabilityDrawerEmpty'),
-            lines: null,
-        });
-    }
-  }, [t]);
+  const handleNodeTrace = useCallback((nodeData: GraphNode) => {
+    setActiveTrace(nodeData);
+  }, []);
 
   const handlePromptSelect = (promptId: string) => {
     if (!promptId) {
@@ -741,8 +710,6 @@ function App() {
       <MiniMap nodeStrokeWidth={3} zoomable pannable />
     </ReactFlow>
   ), [nodes, edges, onNodesChange, onEdgesChange, handleSelectionChange]);
-
-  // --- Render ---
 
   return (
     <div className="flex flex-col md:flex-row h-screen font-sans text-white bg-gray-900 relative overflow-hidden">
@@ -810,7 +777,7 @@ function App() {
                         <label htmlFor="file-upload" className="text-sm font-medium text-gray-300 mb-2 block">
                             {t('uploadLabel')}
                         </label>
-                        <input type="file" id="file-upload" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} accept=".pdf,.txt,.md" className="hidden"/>
+                        <input type="file" id="file-upload" ref={fileInputRef} onChange={handleFileChange} accept=".pdf,.txt,.md" className="hidden"/>
                         <button onClick={() => fileInputRef.current?.click()} className="w-full text-sm p-3 bg-gray-800 border border-dashed border-gray-600 rounded-md text-gray-400 hover:bg-gray-700 hover:border-cyan-500 transition duration-200">
                             {selectedFile ? t('selectedFile', { filename: selectedFile.name }) : t('selectFileButton')}
                         </button>
@@ -1000,7 +967,7 @@ function App() {
                 <div className="flex justify-between items-center mb-4 flex-shrink-0">
                     <h2 className="text-lg font-bold text-cyan-400">{t('traceabilityDrawerTitle')}</h2>
                     <button onClick={() => setActiveTrace(null)} className="text-gray-400 hover:text-white" aria-label="Close">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
                 
@@ -1008,20 +975,22 @@ function App() {
                     <div className="text-sm font-semibold text-gray-300 mb-2 truncate" title={activeTrace.label}>
                         {activeTrace.label}
                     </div>
-                    {activeTrace.lines && (
+                    {activeTrace.source_lines && (
                         <div className="text-xs text-gray-400 mb-2 font-mono">
-                            <span className="font-semibold">{t('traceabilityDrawerLinesLabel')}</span> {activeTrace.lines}
+                            <span className="font-semibold">{t('traceabilityDrawerLinesLabel')}</span> {activeTrace.source_lines}
                         </div>
                     )}
                     <div className="bg-gray-900 p-3 rounded-md text-gray-300 text-sm italic border border-gray-700 max-h-40 overflow-y-auto">
-                        "{activeTrace.quote}"
+                        "{activeTrace.source_quote || t('traceabilityDrawerEmpty')}"
                     </div>
                 </div>
 
-                {preprocessedText ? (
+                {pdfFile && activeTrace.source_quote ? (
+                  <PdfViewer file={pdfFile} highlightText={activeTrace.source_quote} />
+                ) : preprocessedText ? (
                     <div className="overflow-y-auto flex-grow bg-gray-900 p-2 rounded-md">
                         <pre className="text-gray-300 text-xs leading-relaxed whitespace-pre-wrap font-mono">
-                            {renderHighlightedText(preprocessedText, activeTrace.lines)}
+                            {renderHighlightedText(preprocessedText, activeTrace.source_lines || null)}
                         </pre>
                     </div>
                 ) : (

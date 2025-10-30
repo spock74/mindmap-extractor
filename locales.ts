@@ -1,3 +1,4 @@
+
 export const pt = {
   appTitle: "Graphfy",
   appDescription: "Visualize grafos de conhecimento de documentos JSON ou texto usando Gemini.",
@@ -48,6 +49,9 @@ export const pt = {
   traceabilityDrawerEmpty: "Nenhuma citação de origem disponível para este nó.",
   traceabilityDrawerLinesLabel: "Linhas de Referência:",
   traceabilityDrawerFullContextUnavailable: "O contexto de texto completo não está disponível para esta visualização (ex: carregado do histórico).",
+  pdfViewerPageLabel: "Página {{currentPage}} de {{numPages}}",
+  pdfViewerErrorLoading: "Erro ao carregar o PDF.",
+  pdfViewerErrorRendering: "Erro ao renderizar a página do PDF.",
 };
 
 export const en = {
@@ -100,4 +104,7 @@ export const en = {
   traceabilityDrawerEmpty: "No source quote available for this node.",
   traceabilityDrawerLinesLabel: "Reference Lines:",
   traceabilityDrawerFullContextUnavailable: "Full text context is not available for this view (e.g., loaded from history).",
+  pdfViewerPageLabel: "Page {{currentPage}} of {{numPages}}",
+  pdfViewerErrorLoading: "Error loading PDF.",
+  pdfViewerErrorRendering: "Error rendering PDF page.",
 };
