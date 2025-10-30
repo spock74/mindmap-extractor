@@ -46,6 +46,7 @@ export const pt = {
   layoutLR_CURVED: "Esquerda para Direita (Curvo)",
   traceabilityDrawerTitle: "Origem do Texto",
   traceabilityDrawerEmpty: "Nenhuma citação de origem disponível para este nó.",
+  traceabilityDrawerLinesLabel: "Linhas de Referência:",
 };
 
 export const en = {
@@ -96,4 +97,5 @@ export const en = {
   layoutLR_CURVED: "Left to Right (Curved)",
   traceabilityDrawerTitle: "Text Origin",
   traceabilityDrawerEmpty: "No source quote available for this node.",
+  traceabilityDrawerLinesLabel: "Reference Lines:",
 };

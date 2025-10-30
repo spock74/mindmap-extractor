@@ -80,7 +80,7 @@ export const CustomNode: React.FC<NodeProps> = memo(({ id, data }) => {
       <Handle type="target" position={targetPosition} className="!bg-gray-500" />
       <div
         onClick={handleTrace}
-        className={`relative px-4 py-2 shadow-md rounded-md border-2 text-white ${colorClass} whitespace-normal break-words ${data.source_quote ? 'cursor-pointer' : ''}`}
+        className={`relative px-4 py-2 shadow-md rounded-md border-2 text-white ${colorClass} whitespace-normal break-words ${data.source_quote || data.source_lines ? 'cursor-pointer' : ''}`}
         style={{ width: `${NODE_WIDTH}px` }}
       >
         {data.hasChildren && (
@@ -105,7 +105,7 @@ export const CustomNode: React.FC<NodeProps> = memo(({ id, data }) => {
           <div className="text-xs font-bold capitalize text-gray-300 pr-6">{data.type}</div>
           <div className="text-sm font-medium mt-1">{data.label}</div>
         </div>
-        {data.source_quote && (
+        {(data.source_quote || data.source_lines) && (
             <div className="absolute bottom-1 left-2 text-gray-300" title="Source quote available">
                 <QuoteIcon />
             </div>

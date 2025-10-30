@@ -4,6 +4,8 @@
 
 
 
+
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -27,6 +29,7 @@ import { DEFAULT_JSON_DATA, GEMINI_MODELS, NODE_TYPE_COLORS, LAYOUTS, PROMPT_TEM
 import { CustomNode } from './components/CustomNode';
 import { useI18n } from './i18n';
 import { breakCycles } from './utils/graph';
+import { preprocessText, parseLineNumbers } from './utils/text';
 
 // --- PDF Worker Setup ---
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdfjs-dist/build/pdf.worker.min.mjs';
@@ -87,8 +90,8 @@ const transformKbToTriplets = (data: KnowledgeBaseJsonData): TripletJsonData => 
                             label: targetConcept.c_con,
                             type: targetConcept.c_rel,
                         },
-                        // Note: Traceability not directly supported in this transformation
                         source_quote: concept.k_nug?.[0]?.s_quo || 'Source from KB', 
+                        source_lines: 'Linhas: N/A',
                     };
                     triplets.push(newTriplet);
                 }
@@ -130,7 +133,8 @@ function App() {
   const [typeFilters, setTypeFilters] = useState<Set<string>>(new Set());
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(new Set());
-  const [activeTrace, setActiveTrace] = useState<{ label: string; quote: string } | null>(null);
+  const [activeTrace, setActiveTrace] = useState<{ label: string; quote: string; lines: string | null } | null>(null);
+  const [preprocessedText, setPreprocessedText] = useState<string | null>(null);
   const availableTypes = useMemo(() => {
     if (!graphElements?.nodes) return [];
     const types = new Set<string>();
@@ -338,7 +342,8 @@ function App() {
                 data: { 
                   label: triplet.s.label, 
                   type: triplet.s.type || 'default', 
-                  source_quote: triplet.source_quote 
+                  source_quote: triplet.source_quote,
+                  source_lines: triplet.source_lines,
                 },
                 position: { x: 0, y: 0 },
             });
@@ -350,7 +355,8 @@ function App() {
                 data: { 
                   label: triplet.o.label, 
                   type: triplet.o.type || 'default', 
-                  source_quote: triplet.source_quote 
+                  source_quote: triplet.source_quote,
+                  source_lines: triplet.source_lines,
                 },
                 position: { x: 0, y: 0 },
             });
@@ -391,7 +397,8 @@ function App() {
         data: { 
           label: node.label, 
           type: node.type || 'default', 
-          source_quote: node.source_quote 
+          source_quote: node.source_quote,
+          source_lines: node.source_lines,
         },
         position: { x: 0, y: 0 },
     }));
@@ -425,6 +432,7 @@ function App() {
   const processJsonAndSetGraph = useCallback((jsonString: string): string | null => {
     setError(null);
     setGraphElements(null);
+    setPreprocessedText(null); // Clear preprocessed text for manual/history loads
     try {
       // New: Clean the string to remove potential markdown fences from AI response.
       let cleanJsonString = jsonString.trim();
@@ -539,13 +547,15 @@ function App() {
     try {
       setLoadingMessage("loadingMessageReadingFile");
       const fileContent = await readFileContent(selectedFile);
+      const processedContent = preprocessText(fileContent);
+      setPreprocessedText(processedContent);
       
       if (generationCancelledRef.current) return;
       
       setLoadingMessage("loadingMessageGenerating");
       const finalPrompt = prompt
-        .replace('{TEXTO_DE_ENTRADA}', fileContent)
-        .replace('{TEXTOS_INTEGRAIS_DOS_ARTIGOS}', fileContent)
+        .replace('{TEXTO_DE_ENTRADA}', processedContent)
+        .replace('{TEXTOS_INTEGRAIS_DOS_ARTIGOS}', processedContent)
         .replace('{MAX_CONCEITOS}', String(maxConcepts));
         
       const jsonString = await generateJsonFromText(finalPrompt, model);
@@ -669,12 +679,19 @@ function App() {
     });
   }, []);
     
-  const handleNodeTrace = useCallback((nodeData: { label: string; source_quote?: string }) => {
-    if (nodeData.source_quote) {
-        setActiveTrace({ label: nodeData.label, quote: nodeData.source_quote });
+  const handleNodeTrace = useCallback((nodeData: { label: string; source_quote?: string; source_lines?: string }) => {
+    if (nodeData.source_quote || nodeData.source_lines) {
+        setActiveTrace({
+            label: nodeData.label,
+            quote: nodeData.source_quote || t('traceabilityDrawerEmpty'),
+            lines: nodeData.source_lines || null,
+        });
     } else {
-        // Even if no quote, open the drawer to show the message
-        setActiveTrace({ label: nodeData.label, quote: t('traceabilityDrawerEmpty') });
+         setActiveTrace({
+            label: nodeData.label,
+            quote: t('traceabilityDrawerEmpty'),
+            lines: null,
+        });
     }
   }, [t]);
 
@@ -687,6 +704,28 @@ function App() {
     if (selected) {
         setPrompt(selected.content);
     }
+  };
+
+  const renderHighlightedText = (fullText: string, linesStr: string | null) => {
+      const linesToHighlight = parseLineNumbers(linesStr);
+      if (linesToHighlight.length === 0) {
+          return fullText;
+      }
+      const lines = fullText.split('\n');
+      
+      return (
+          <>
+              {lines.map((line, index) => {
+                  const lineNumber = index + 1;
+                  const isHighlighted = linesToHighlight.includes(lineNumber);
+                  return (
+                      <span key={index} className={isHighlighted ? 'bg-cyan-900/50 block' : 'block'}>
+                          {line}
+                      </span>
+                  );
+              })}
+          </>
+      );
   };
 
   const reactFlowInstance = useMemo(() => (
@@ -969,12 +1008,33 @@ function App() {
                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
-                <div className="text-sm font-semibold text-gray-300 mb-2 truncate" title={activeTrace.label}>
-                    {activeTrace.label}
+                
+                <div className="flex-shrink-0 mb-4">
+                    <div className="text-sm font-semibold text-gray-300 mb-2 truncate" title={activeTrace.label}>
+                        {activeTrace.label}
+                    </div>
+                    {activeTrace.lines && (
+                        <div className="text-xs text-gray-400 mb-2 font-mono">
+                            <span className="font-semibold">{t('traceabilityDrawerLinesLabel')}</span> {activeTrace.lines}
+                        </div>
+                    )}
+                    <div className="bg-gray-900 p-3 rounded-md text-gray-300 text-sm italic border border-gray-700 max-h-40 overflow-y-auto">
+                        "{activeTrace.quote}"
+                    </div>
                 </div>
-                <div className="overflow-y-auto flex-grow bg-gray-900 p-3 rounded-md text-gray-300 text-sm leading-relaxed"
-                     dangerouslySetInnerHTML={{ __html: marked.parse(activeTrace.quote) }}
-                />
+
+                {preprocessedText ? (
+                    <div className="overflow-y-auto flex-grow bg-gray-900 p-2 rounded-md">
+                        <pre className="text-gray-300 text-xs leading-relaxed whitespace-pre-wrap font-mono">
+                            {renderHighlightedText(preprocessedText, activeTrace.lines)}
+                        </pre>
+                    </div>
+                ) : (
+                    <div 
+                        className="overflow-y-auto flex-grow bg-gray-900 p-3 rounded-md text-gray-300 text-sm leading-relaxed prose prose-invert prose-sm"
+                        dangerouslySetInnerHTML={{ __html: marked.parse(activeTrace.quote) }}
+                    />
+                )}
             </>
         )}
     </div>
