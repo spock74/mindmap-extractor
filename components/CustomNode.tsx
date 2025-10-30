@@ -36,6 +36,10 @@ export const CustomNode: React.FC<NodeProps> = memo(({ id, data }) => {
   const sourcePosition = isHorizontal ? Position.Right : Position.Bottom;
 
   const colorClass = NODE_TYPE_COLORS[data.type] || NODE_TYPE_COLORS.default;
+  
+  const chevronPositionClass = isHorizontal
+    ? 'top-1/2 -translate-y-1/2 -right-3' // For LR/RL layouts
+    : '-bottom-3 left-1/2 -translate-x-1/2'; // For TB/BT layouts
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -68,7 +72,7 @@ export const CustomNode: React.FC<NodeProps> = memo(({ id, data }) => {
         {data.hasChildren && (
             <button
                 onClick={handleToggle}
-                className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-10 p-0.5 bg-gray-600 rounded-full cursor-pointer text-gray-300 hover:text-white hover:bg-gray-500 transition-colors"
+                className={`absolute z-10 p-0.5 bg-gray-600 rounded-full cursor-pointer text-gray-300 hover:text-white hover:bg-gray-500 transition-colors ${chevronPositionClass}`}
                 aria-label={data.isCollapsed ? "Expand" : "Collapse"}
                 title={data.isCollapsed ? "Expand" : "Collapse"}
             >

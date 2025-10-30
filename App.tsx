@@ -408,8 +408,15 @@ function App() {
     setError(null);
     setGraphElements(null);
     try {
-      let parsedJson = JSON.parse(jsonString);
-      let finalJsonToStore = jsonString;
+      // New: Clean the string to remove potential markdown fences from AI response.
+      let cleanJsonString = jsonString.trim();
+      const markdownMatch = /```(?:json)?\s*([\s\S]*?)\s*```/.exec(cleanJsonString);
+      if (markdownMatch) {
+        cleanJsonString = markdownMatch[1];
+      }
+      
+      let parsedJson = JSON.parse(cleanJsonString);
+      let finalJsonToStore = cleanJsonString;
 
       // Fix: Handle cases where the AI returns a raw JSON array instead of an
       // object. This makes the app more robust by wrapping the array in the
@@ -418,6 +425,13 @@ function App() {
         parsedJson = { triplets: parsedJson };
         // Update the string to be stored in history to the corrected format.
         finalJsonToStore = JSON.stringify(parsedJson, null, 2);
+      } else if (typeof parsedJson === 'object' && parsedJson !== null && !('result' in parsedJson) && !('kb' in parsedJson) && !('triplets' in parsedJson)) {
+        // New: Add robustness for objects with a single, unknown root key containing an array.
+        const keys = Object.keys(parsedJson);
+        if (keys.length === 1 && Array.isArray(parsedJson[keys[0]])) {
+            parsedJson = { triplets: parsedJson[keys[0]] };
+            finalJsonToStore = JSON.stringify(parsedJson, null, 2);
+        }
       }
       
       if ('result' in parsedJson) {
