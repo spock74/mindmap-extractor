@@ -90,7 +90,7 @@ Cada aresta deve ser um objeto com:
 *   \`id\`: String única.
 *   \`source\`: O \`id\` do nó de origem.
 *   \`target\`: O \`id\` do nó de destino.
-*   \`label\`: **(Recomendado)** Uma string curta descrevendo a relação. São exemplos de descrição de relação: \`cause_of\`, \`caused_by\`, \`treats\`,  
+*   \`label\`: **(Recomendado)** Uma string curta descrevendo a relação. São exemplos de descrição de relação: \`cause_of\`, \`caused_by\`, \`treats\`
 
 ## FORMATO DE SAÍDA
 Responda **estritamente em um único bloco de código JSON**.
@@ -172,50 +172,47 @@ Analise o artigo e modele seu conteúdo em um formato de grafo JSON. Siga rigoro
 
 Cada nó deve ser um objeto com:
 
-  * \`id\`: String única em **kebab-case**.
-  * \`label\`: Texto descritivo (conclusões ou entidades).
-  * \`type\`: Classificação semântica (use estritamente um dos tipos abaixo).
-  * \`source_quote\`: A sentença exata do texto original.
-  * \`source_lines\`: A string com os números das linhas de referência.
+*   \`id\`: String única em **kebab-case**.
+*   \`label\`: Texto descritivo (conclusões ou entidades).
+*   \`type\`: Classificação semântica (use estritamente um dos tipos abaixo).
+*   \`source_quote\`: A sentença exata do texto original.
+*   \`source_lines\`: A string com os números das linhas de referência.
 
 #### **Tipos de Nós Permitidos:**
 
-  * \`mainConcept\`: O conceito central ou o problema sendo estudado.
-  * \`mechanism\`: Um processo ou via fisiopatológica (ex: "Disinibição de Neurônios DA").
-  * \`riskFactor\`: Um fator de risco (ex: "Hipertensão").
-  * \`treatment\`: Uma intervenção ou classe de droga (ex: "Inibidores do SRA").
-  * \`drug\`: Um medicamento específico (ex: "Digoxina").
-  * \`population\`: Um grupo de estudo (ex: "Idosos com IC Diastólica e DRC").
-  * \`finding\`: Um resultado ou dado quantitativo (ex: "HR 0.82 (0.70-0.97)").
-  * \`insight\`: Uma conclusão qualitativa ou interpretação (ex: "Plasticidade foi abolida").
-  * \`diagnostic\`: Um método de diagnóstico ou medida (ex: "Ecocardiografia").
-  * \`symptom\`: Um sintoma clínico.
-  * \`category\`: Um nó de agrupamento genérico (usar com moderação).
-  * \`implication\`: Uma implicação futura ou clínica.
+*   \`mainConcept\`: O conceito central ou o problema sendo estudado.
+*   \`mechanism\`: Um processo ou via fisiopatológica (ex: "Disinibição de Neurônios DA").
+*   \`riskFactor\`: Um fator de risco (ex: "Hipertensão").
+*   \`treatment\`: Uma intervenção ou classe de droga (ex: "Inibidores do SRA").
+*   \`drug\`: Um medicamento específico (ex: "Digoxina").
+*   \`population\`: Um grupo de estudo (ex: "Idosos com IC Diastólica e DRC").
+*   \`finding\`: Um resultado ou dado quantitativo (ex: "HR 0.82 (0.70-0.97)").
+*   \`insight\`: Uma conclusão qualitativa ou interpretação (ex: "Plasticidade foi abolida").
+*   \`diagnostic\`: Um método de diagnóstico ou medida (ex: "Ecocardiografia").
+*   \`symptom\`: Um sintoma clínico.
+*   \`category\`: Um nó de agrupamento genérico (usar com moderação).
+*   \`implication\`: Uma implicação futura ou clínica.
 
 #### **Arestas (\`edges\`)**
 
 Cada aresta deve ser um objeto com:
 
-  * \`id\`: String única (ex: "e-1-2").
-  * \`source\`: O \`id\` do nó de origem (a Causa).
-  * \`target\`: O \`id\` do nó de destino (o Efeito).
-  * \`label\`: **(OBRIGATÓRIO)** Uma string curta descrevendo a **relação causal**.
+*   \`id\`: String única (ex: "e-1-2").
+*   \`source\`: O \`id\` do nó de origem (a Causa).
+*   \`target\`: O \`id\` do nó de destino (o Efeito).
+*   \`label\`: **(OBRIGATÓRIO)** Uma string curta descrevendo a **relação causal**.
+*   \`strength\`: **(OBRIGATÓRIO)** A força da relação. Use **estritamente** um dos seguintes valores: \`"forte"\`, \`"moderada"\`, \`"fraca"\`.
+    *   **forte:** Relação causal direta, bem estabelecida ou principal achado do artigo (ex: "Droga X *causou* Y").
+    *   **moderada:** Relação causal implicada ou secundária (ex: "Droga X *foi associada com* Y").
+    *   **fraca:** Relação especulativa ou hipótese (ex: "Droga X *pode influenciar* Y").
+*   \`nature\`: **(OBRIGATÓRIO)** A natureza da relação. Use **estritamente** um dos seguintes valores: \`"positiva"\`, \`"negativa"\`, \`"neutra"\`.
+    *   **positiva:** A causa aumenta, ativa ou promove o efeito (ex: "\`aumenta\`", "\`ativa\`", "\`leva_a\`").
+    *   **negativa:** A causa diminui, inibe ou previne o efeito (ex: "\`diminui\`", "\`inibe\`", "\`previne\`").
+    *   **neutra:** A relação não tem uma valência positiva ou negativa clara (ex: "\`é_medido_por\`", "\`é_um_tipo_de\`").
 
 #### **Rótulos de Arestas Recomendados (Foco Causal):**
 
-  * \`causa\`
-  * \`leva_a\`
-  * \`resulta_em\`
-  * \`inibe\`
-  * \`ativa\`
-  * \`aumenta\`
-  * \`diminui\`
-  * \`previne\`
-  * \`trata\`
-  * \`é_evidência_de\`
-  * \`é_medido_por\`
-  * \`é_um_tipo_de\` (usar com moderação, apenas para hierarquia essencial)
+*   "\`causa\`", "\`leva_a\`", "\`resulta_em\`", "\`inibe\`", "\`ativa\`", "\`aumenta\`", "\`diminui\`", "\`previne\`", "\`trata\`", "\`é_evidência_de\`", "\`é_medido_por\`", "\`é_um_tipo_de\`" (usar com moderação, apenas para hierarquia essencial)
 
 -----
 
@@ -229,23 +226,23 @@ Responda **estritamente em um único bloco de código JSON**.
   "nodes": [
     {
       "id": "main",
-      "label": "Tópico Central Causal (ex: Efeito da Droga X na População Y)",
+      "label": "Efeito da Droga X na População Y",
       "type": "mainConcept",
       "source_quote": "A citação completa que define o problema ou o achado principal.",
       "source_lines": "Linhas: 10-12"
     },
     {
       "id": "mecanismo-chave",
-      "label": "Mecanismo X",
+      "label": "Inibição da via Z",
       "type": "mechanism",
-      "source_quote": "O texto descrevendo o mecanismo X.",
+      "source_quote": "O texto descrevendo que a Droga X inibe a via Z.",
       "source_lines": "Linhas: 45-47"
     },
     {
       "id": "resultado-chave",
-      "label": "Droga X Aumentou Risco (HR 2.46)",
+      "label": "Droga X reduziu o risco de morte (HR 0.75)",
       "type": "finding",
-      "source_quote": "No nosso estudo, a Droga X aumentou o risco (HR 2.46, 1.25-4.83).",
+      "source_quote": "No nosso estudo, a Droga X reduziu o risco de morte (HR 0.75, 0.60-0.94).",
       "source_lines": "Linhas: 80-82"
     }
   ],
@@ -254,13 +251,17 @@ Responda **estritamente em um único bloco de código JSON**.
       "id": "e-main-mecanismo",
       "source": "main",
       "target": "mecanismo-chave",
-      "label": "opera_via"
+      "label": "opera_via",
+      "strength": "forte",
+      "nature": "neutra"
     },
     {
       "id": "e-mecanismo-resultado",
       "source": "mecanismo-chave",
       "target": "resultado-chave",
-      "label": "resulta_em"
+      "label": "resulta_em",
+      "strength": "forte",
+      "nature": "negativa"
     }
   ]
 }

@@ -103,6 +103,8 @@ export const GraphEdgeSchema = z.object({
     source: z.string().min(1),
     target: z.string().min(1),
     label: z.string().optional(),
+    strength: z.enum(['forte', 'moderada', 'fraca']).optional(),
+    nature: z.enum(['positiva', 'negativa', 'neutra']).optional(),
 });
 
 export const GraphJsonDataSchema = z.object({

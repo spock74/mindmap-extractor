@@ -17,7 +17,7 @@ import { ZodError } from 'zod';
 
 import { getLayoutedElements } from './utils/layout';
 import { TripletJsonDataSchema, KnowledgeBaseJsonDataSchema, GraphJsonDataSchema } from './utils/schema';
-import { TripletJsonData, KnowledgeBaseJsonData, Triplet, HistoryItem, KnowledgeBaseConcept, GraphJsonData, GraphNode } from './types';
+import { TripletJsonData, KnowledgeBaseJsonData, Triplet, HistoryItem, KnowledgeBaseConcept, GraphJsonData, GraphNode, GraphEdge } from './types';
 import { DEFAULT_JSON_DATA, GEMINI_MODELS, NODE_TYPE_COLORS, LAYOUTS, PROMPT_TEMPLATES, NODE_WIDTH } from './constants';
 import { CustomNode } from './components/CustomNode';
 import { PdfViewer } from './components/PdfViewer';
@@ -96,7 +96,7 @@ const nodeTypes = {
 };
 
 const HamburgerIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="3" y1="12" x2="21" y2="12"></line>
     <line x1="3" y1="6" x2="21" y2="6"></line>
     <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -104,11 +104,75 @@ const HamburgerIcon = () => (
 );
 
 const CloseIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="6" x2="6" y2="18"></line>
     <line x1="6" y1="6" x2="18" y2="18"></line>
   </svg>
 );
+
+const getEdgeStyle = (edge: GraphEdge) => {
+    const styles = {
+        color: '#A0AEC0',
+        strokeWidth: 2,
+        strokeDasharray: 'none',
+    };
+
+    // Color based on nature
+    if (edge.nature === 'positiva') {
+        styles.color = '#48BB78'; // green
+    } else if (edge.nature === 'negativa') {
+        styles.color = '#F56565'; // red
+    }
+
+    // Thickness and style based on strength
+    if (edge.strength === 'forte') {
+        styles.strokeWidth = 3;
+    } else if (edge.strength === 'fraca') {
+        styles.strokeWidth = 1;
+        styles.strokeDasharray = '5 5';
+    }
+    
+    return styles;
+};
+
+const EdgeLegend: React.FC = () => {
+    const { t } = useI18n();
+
+    const legendItems = [
+        { label: t('positiveStrong'), color: '#48BB78', width: 3, dash: 'none' },
+        { label: t('positiveModerate'), color: '#48BB78', width: 2, dash: 'none' },
+        { label: t('positiveWeak'), color: '#48BB78', width: 1, dash: '5 5' },
+        { label: t('negativeStrong'), color: '#F56565', width: 3, dash: 'none' },
+        { label: t('negativeModerate'), color: '#F56565', width: 2, dash: 'none' },
+        { label: t('negativeWeak'), color: '#F56565', width: 1, dash: '5 5' },
+        { label: t('neutral'), color: '#A0AEC0', width: 2, dash: 'none' },
+    ];
+
+    return (
+        <div className="absolute bottom-4 right-4 bg-gray-900/80 p-3 rounded-lg border border-gray-700 text-white text-xs z-10 w-48">
+            <h3 className="font-bold mb-2 text-center text-gray-300">{t('edgeLegendTitle')}</h3>
+            <div className="space-y-2">
+                {legendItems.map(item => (
+                    <div key={item.label} className="flex items-center gap-2">
+                        <svg width="30" height="10" viewBox="0 0 30 10">
+                            <line
+                                x1="0"
+                                y1="5"
+                                x2="30"
+                                y2="5"
+                                stroke={item.color}
+                                strokeWidth={item.width}
+                                strokeDasharray={item.dash}
+                            />
+                        </svg>
+                        <span className="text-gray-400">{item.label}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 
 function App() {
   const { t, language, setLanguage } = useI18n();
@@ -437,17 +501,20 @@ function App() {
         position: { x: 0, y: 0 },
     }));
 
-    const initialEdges: Edge[] = data.result.edges.map(edge => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        label: edge.label,
-        type: 'smoothstep',
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#A0AEC0' },
-        style: { stroke: '#A0AEC0', strokeWidth: 2 },
-        labelStyle: { fill: '#E2E8F0', fontSize: 12 },
-        labelBgStyle: { fill: '#2D3748' },
-    }));
+    const initialEdges: Edge[] = data.result.edges.map(edge => {
+        const { color, strokeWidth, strokeDasharray } = getEdgeStyle(edge);
+        return {
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            label: edge.label,
+            type: 'smoothstep',
+            markerEnd: { type: MarkerType.ArrowClosed, color },
+            style: { stroke: color, strokeWidth, strokeDasharray },
+            labelStyle: { fill: '#E2E8F0', fontSize: 12 },
+            labelBgStyle: { fill: '#2D3748' },
+        };
+    });
     
     const sourceIds = new Set(initialEdges.map(e => e.source));
     const initialNodes = initialNodesSource.map(node => ({
@@ -832,8 +899,9 @@ function App() {
       <Background color="#4A5568" gap={16} />
       <Controls />
       <MiniMap nodeStrokeWidth={3} zoomable pannable />
+      {graphElements && graphElements.edges.length > 0 && <EdgeLegend />}
     </ReactFlow>
-  ), [nodes, edges, onNodesChange, onEdgesChange, handleSelectionChange]);
+  ), [nodes, edges, onNodesChange, onEdgesChange, handleSelectionChange, graphElements]);
 
   return (
     <div className="h-screen font-sans text-white bg-gray-900 relative overflow-hidden">

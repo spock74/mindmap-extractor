@@ -57,6 +57,14 @@ export const pt = {
   pdfViewerErrorRendering: "Erro ao renderizar a página do PDF.",
   openPanel: "Abrir painel de controle",
   closePanel: "Fechar painel de controle",
+  edgeLegendTitle: "Legenda da Aresta",
+  positiveStrong: "Positiva Forte",
+  positiveModerate: "Positiva Moderada",
+  positiveWeak: "Positiva Fraca",
+  negativeStrong: "Negativa Forte",
+  negativeModerate: "Negativa Moderada",
+  negativeWeak: "Negativa Fraca",
+  neutral: "Neutra",
 };
 
 export const en = {
@@ -117,4 +125,12 @@ export const en = {
   pdfViewerErrorRendering: "Error rendering PDF page.",
   openPanel: "Open control panel",
   closePanel: "Close control panel",
+  edgeLegendTitle: "Edge Legend",
+  positiveStrong: "Strong Positive",
+  positiveModerate: "Moderate Positive",
+  positiveWeak: "Weak Positive",
+  negativeStrong: "Strong Negative",
+  negativeModerate: "Moderate Negative",
+  negativeWeak: "Weak Negative",
+  neutral: "Neutral",
 };

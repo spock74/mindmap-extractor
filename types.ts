@@ -75,6 +75,8 @@ export interface GraphEdge {
     source: string;
     target: string;
     label?: string;
+    strength?: 'forte' | 'moderada' | 'fraca';
+    nature?: 'positiva' | 'negativa' | 'neutra';
 }
 
 export interface GraphResult {
