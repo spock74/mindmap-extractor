@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -117,6 +118,45 @@ function App() {
   const [preprocessedText, setPreprocessedText] = useState<string | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   
+  const [isResizing, setIsResizing] = useState(false);
+  const [drawerWidth, setDrawerWidth] = useState(window.innerWidth / 3);
+  const drawerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+  
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (isResizing) {
+        const newWidth = window.innerWidth - e.clientX;
+        const minWidth = 300;
+        const maxWidth = window.innerWidth * 0.8;
+        if (newWidth > minWidth && newWidth < maxWidth) {
+            setDrawerWidth(newWidth);
+        }
+    }
+  }, [isResizing]);
+
+  useEffect(() => {
+    if (isResizing) {
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+    } else {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, handleMouseMove, handleMouseUp]);
+
+
   const availableTypes = useMemo(() => {
     if (!graphElements?.nodes) return [];
     const types = new Set<string>();
@@ -961,7 +1001,16 @@ function App() {
       <main className="w-full md:w-2/3 lg:w-3/4 flex-grow min-h-0">
         {reactFlowInstance}
       </main>
-       <div className={`absolute top-0 right-0 h-screen w-full md:w-1/3 lg:w-1/4 bg-gray-800 border-l border-gray-700 shadow-2xl z-20 transform transition-transform duration-300 ease-in-out ${activeTrace ? 'translate-x-0' : 'translate-x-full'} p-4 flex flex-col`}>
+       <div 
+         ref={drawerRef}
+         className={`absolute top-0 right-0 h-screen bg-gray-800 border-l border-gray-700 shadow-2xl z-20 transform transition-transform duration-300 ease-in-out ${activeTrace ? 'translate-x-0' : 'translate-x-full'} p-4 flex flex-col`}
+         style={{ width: `${drawerWidth}px`}}
+       >
+        <div 
+          onMouseDown={handleMouseDown}
+          className="absolute top-0 left-0 h-full w-2 cursor-col-resize z-30"
+          title="Resize Panel"
+        />
         {activeTrace && (
             <>
                 <div className="flex justify-between items-center mb-4 flex-shrink-0">
@@ -985,19 +1034,21 @@ function App() {
                     </div>
                 </div>
 
-                {pdfFile && activeTrace.source_quote ? (
-                  <PdfViewer file={pdfFile} highlightText={activeTrace.source_quote} />
-                ) : preprocessedText ? (
-                    <div className="overflow-y-auto flex-grow bg-gray-900 p-2 rounded-md">
-                        <pre className="text-gray-300 text-xs leading-relaxed whitespace-pre-wrap font-mono">
-                            {renderHighlightedText(preprocessedText, activeTrace.source_lines || null)}
-                        </pre>
-                    </div>
-                ) : (
-                    <div className="overflow-y-auto flex-grow bg-gray-900 p-3 rounded-md flex items-center justify-center">
-                       <p className="text-gray-500 text-sm italic text-center">{t('traceabilityDrawerFullContextUnavailable')}</p>
-                    </div>
-                )}
+                <div className="flex-grow min-h-0">
+                    {pdfFile && activeTrace.source_quote ? (
+                      <PdfViewer file={pdfFile} highlightText={activeTrace.source_quote} />
+                    ) : preprocessedText ? (
+                        <div className="overflow-y-auto h-full bg-gray-900 p-2 rounded-md">
+                            <pre className="text-gray-300 text-xs leading-relaxed whitespace-pre-wrap font-mono">
+                                {renderHighlightedText(preprocessedText, activeTrace.source_lines || null)}
+                            </pre>
+                        </div>
+                    ) : (
+                        <div className="overflow-y-auto h-full bg-gray-900 p-3 rounded-md flex items-center justify-center">
+                           <p className="text-gray-500 text-sm italic text-center">{t('traceabilityDrawerFullContextUnavailable')}</p>
+                        </div>
+                    )}
+                </div>
             </>
         )}
     </div>

@@ -52,6 +52,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ file, highlightText }) => 
       const renderContext = {
         canvasContext: context,
         viewport: viewport,
+        // @ts-expect-error - Add the 'canvas' property to satisfy the incorrect type definition.
+        canvas: canvas,
       };
       await page.render(renderContext).promise;
       
