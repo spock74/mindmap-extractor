@@ -1,7 +1,4 @@
 
-
-
-
 export const PROMPT_TEMPLATES = [
   {
     id: 'extracao-simples-com-rastreabilidade',
@@ -13,9 +10,9 @@ Sua tarefa é ler o texto fornecido e extrair as **principais** relações semâ
 O formato da sua saída deve ser um único array JSON de fatos.
 CADA fato deve ter a estrutura:
 {
-  "s": { "label": "Nome da Entidade", "type": "Tipo da Entidade" },
+  "s": { "label": "Nome da Entidade", "type": "Tipo da Entade" },
   "p": "Relação (Predicado)",
-  "o": { "label": "Nome da Entidade", "type": "Tipo da Entidade" },
+  "o": { "label": "Nome da Entidade", "type": "Tipo da Entade" },
   "source_quote": "A sentença exata do texto original que justifica este fato, SEM o número da linha.",
   "source_lines": "Uma string indicando os números de linha exatos de onde a citação foi extraída (ex: 'Linhas: 42-45')."
 }
@@ -49,57 +46,94 @@ CADA fato deve ter a estrutura:
       "source_lines": "Linhas: 85-86"
     }
     \`\`\`
+
 ---
 
 Artigo:
 
-{TEXTO_DE_ENTRADA}`
+{TEXTO_DE_ENTRADA}
+`
   },
   {
-    id: 'prompt-mestre-grafo-hierarquico',
+    id: 'prompt-mestre-com-rastreabilidade',
     title: 'PROMPT MESTRE P/ GRAFO DE CONHECIMENTO (v5.0)',
-    content: `Você é um Engenheiro de Ontologias e Grafos de Conhecimento. Sua missão é modelar informações complexas de textos científicos em uma estrutura de grafo JSON. O texto de entrada que você receberá foi pré-processado: cada linha é prefixada com um número (ex: "1: ...", "2: ...").
+    content: `# PROMPT MESTRE PARA EXTRAÇÃO DE GRAFO DE CONHECIMENTO CIENTÍFICO (v5.0)
+
+## PERSONA
+Você é um Engenheiro de Ontologias e Grafos de Conhecimento. Sua missão é modelar informações complexas de textos científicos em uma estrutura de grafo JSON hierárquica, semanticamente rica e logicamente coesa, adequada para visualização de dados. O texto de entrada que você receberá foi pré-processado: cada linha é prefixada com um número (ex: "1: ...", "2: ...").
 
 ## TAREFA
-Analise o artigo e modele seu conteúdo em um formato de grafo JSON, seguindo rigorosamente as regras abaixo.
+Analise o artigo e modele seu conteúdo em um formato de grafo JSON. Siga rigorosamente os princípios de modelagem e as regras de formatação abaixo.
 
 ### PRINCÍPIOS DE MODELAGEM DO GRAFO
 
-1.  **Hierarquia Lógica:** Organize os nós do geral para o específico (Raiz > Categorias > Sub-temas > Detalhes).
-2.  **Riqueza Semântica:** Use os \`type\`s de nós e os \`label\`s de arestas para tornar o grafo autoexplicativo.
-3.  **Rastreabilidade Obrigatória:** Cada nó gerado DEVE conter:
-    *   \`source_quote\`: A sentença exata do texto original que justifica sua criação (SEM o número da linha).
-    *   \`source_lines\`: Uma string indicando os números de linha exatos de onde a citação foi extraída (ex: 'Linhas: 42-45').
+1.  **Rastreabilidade Obrigatória:** Para cada nó, você DEVE incluir \`source_quote\` (a citação exata, SEM o número da linha) E \`source_lines\` (os números de linha exatos de onde a citação foi extraída, ex: 'Linhas: 42-45').
+2.  **Síntese Hierárquica Lógica:** Organize os nós extraídos em uma hierarquia clara que flua do geral para o específico.
+3.  **Riqueza Semântica:** Classifique cada nó com um \`type\` que descreva sua função no grafo.
 
 ### REGRAS DE FORMATAÇÃO PARA A SAÍDA JSON
 
 #### **Nós (\`nodes\`)**
 Cada nó deve ser um objeto com:
 *   \`id\`: String única em **kebab-case**.
-*   \`label\`: Texto descritivo e conciso.
-*   \`type\`: Use **estritamente** um dos seguintes: \`mainConcept\`, \`category\`, \`keyConcept\`, \`process\`, \`property\`, \`method\`, \`finding\`, \`implication\`, \`example\`.
-*   \`source_quote\`: **(OBRIGATÓRIO)** A sentença exata e não modificada.
-*   \`source_lines\`: **(OBRIGATÓRIO)** A string com os números de linha.
+*   \`label\`: Texto descritivo.
+*   \`type\`: Classificação semântica (use estritamente um dos tipos abaixo).
+*   \`source_quote\`: A sentença exata do texto original.
+*   \`source_lines\`: A string com os números das linhas de referência.
+
+#### **Tipos de Nós Permitidos:**
+*   \`mainConcept\`, \`category\`, \`keyConcept\`, \`process\`, \`property\`, \`method\`, \`finding\`, \`implication\`, \`example\`
 
 #### **Arestas (\`edges\`)**
-Cada aresta deve ser um objeto com: \`id\`, \`source\`, \`target\`, e um \`label\` opcional (ex: \`causa\`, \`contém\`).
+Cada aresta deve ser um objeto com:
+*   \`id\`: String única.
+*   \`source\`: O \`id\` do nó de origem.
+*   \`target\`: O \`id\` do nó de destino.
+*   \`label\`: **(Recomendado)** Uma string curta descrevendo a relação.
 
 ## FORMATO DE SAÍDA
-Responda **estritamente em um único bloco de código JSON**, sem texto adicional.
+Responda **estritamente em um único bloco de código JSON**.
 
 \`\`\`json
 {
-  "title": "Um Título Conciso e Descritivo para o Grafo",
+  "title": "Título Conciso do Grafo",
   "nodes": [
     {
       "id": "main",
       "label": "Tópico Central do Texto",
       "type": "mainConcept",
-      "source_quote": "A sentença do texto que introduz o tópico central...",
-      "source_lines": "Linhas: 1-2"
+      "source_quote": "A citação completa que define o tópico central.",
+      "source_lines": "Linhas: 1-3"
+    },
+    {
+      "id": "resultados",
+      "label": "Resultados Principais",
+      "type": "category",
+      "source_quote": "A citação que resume os resultados.",
+      "source_lines": "Linhas: 80-82"
+    },
+    {
+      "id": "reducao-significativa",
+      "label": "Redução de 30% no Desfecho Primário (p<0.05)",
+      "type": "finding",
+      "source_quote": "Em nosso estudo, observamos uma Redução de 30% no Desfecho Primário (p<0.05).",
+      "source_lines": "Linhas: 85-86"
     }
   ],
-  "edges": []
+  "edges": [
+    {
+      "id": "e-main-resultados",
+      "source": "main",
+      "target": "resultados",
+      "label": "apresenta"
+    },
+    {
+      "id": "e-resultados-reducao",
+      "source": "resultados",
+      "target": "reducao-significativa",
+      "label": "mostra"
+    }
+  ]
 }
 \`\`\`
 
@@ -108,130 +142,79 @@ Responda **estritamente em um único bloco de código JSON**, sem texto adiciona
 Artigo:
 
 {TEXTO_DE_ENTRADA}`
-  },
+  }
 ];
 
 
-export const NODE_WIDTH = 200;
-
-export const NODE_TYPE_COLORS: { [key: string]: string } = {
-  // Original types from triplet prompt
-  drug: 'bg-blue-600 border-blue-400',
-  population: 'bg-green-600 border-green-400',
-  statistic: 'bg-yellow-600 border-yellow-400',
-  mainConcept: 'bg-purple-600 border-purple-400',
-  detail: 'bg-gray-600 border-gray-400',
-  diagnostic: 'bg-indigo-600 border-indigo-400',
-  comparison: 'bg-pink-600 border-pink-400',
-  insight: 'bg-teal-600 border-teal-400',
-  treatment: 'bg-red-600 border-red-400',
-  comorbidity: 'bg-orange-600 border-orange-400',
-  mechanism: 'bg-cyan-600 border-cyan-400',
-  riskFactor: 'bg-rose-700 border-rose-500',
-  
-  // Types from original primary prompt (some overlap, some new)
-  category: 'bg-fuchsia-700 border-fuchsia-500',
-  target: 'bg-sky-700 border-sky-500',
-  evidence: 'bg-emerald-700 border-emerald-500',
-  challenge: 'bg-amber-700 border-amber-500',
-  drugClass: 'bg-violet-700 border-violet-500',
-
-  // New types from "PROMPT MESTRE" (v5.0)
-  keyConcept: 'bg-lime-600 border-lime-400',
-  process: 'bg-sky-600 border-sky-400',
-  property: 'bg-indigo-500 border-indigo-300',
-  method: 'bg-amber-500 border-amber-300',
-  finding: 'bg-emerald-500 border-emerald-300',
-  implication: 'bg-rose-500 border-rose-300',
-  example: 'bg-stone-500 border-stone-400',
-
-  // Types from Knowledge Base format
-  Fundamental: 'bg-red-700 border-red-500',
-  Importante: 'bg-yellow-600 border-yellow-400',
-  Especializado: 'bg-blue-600 border-blue-400',
-  
-  // Default fallback
-  default: 'bg-slate-700 border-slate-500',
-};
 
 export const DEFAULT_JSON_DATA = `{
   "triplets": [
     {
-      "s": {
-        "label": "digoxin",
-        "type": "drug"
-      },
-      "p": "reduced the risk of",
-      "o": {
-        "label": "30-day all-cause hospitalization",
-        "type": "statistic"
-      }
+      "s": { "label": "React Flow", "type": "library" },
+      "p": "is used for",
+      "o": { "label": "rendering graphs", "type": "task" }
     },
     {
-      "s": {
-        "label": "digoxin",
-        "type": "drug"
-      },
-      "p": "has not been studied in",
-      "o": {
-        "label": "older diastolic heart failure patients",
-        "type": "population"
-      }
+      "s": { "label": "rendering graphs", "type": "task" },
+      "p": "is achieved with",
+      "o": { "label": "custom nodes", "type": "feature" }
     },
     {
-      "s": {
-        "label": "988 patients with chronic heart failure and preserved (>45%) ejection fraction",
-        "type": "population"
-      },
-      "p": "included",
-      "o": {
-        "label": "631 patients \\u226565 years",
-        "type": "population"
-      }
+      "s": { "label": "Dagre", "type": "library" },
+      "p": "handles",
+      "o": { "label": "automatic layout", "type": "task" }
     },
     {
-      "s": {
-        "label": "631 patients \\u226565 years",
-        "type": "population"
-      },
-      "p": "included",
-      "o": {
-        "label": "311 received digoxin",
-        "type": "population"
-      }
-    },
-    {
-      "s": {
-        "label": "All-cause hospitalization 30-day post-randomization",
-        "type": "statistic"
-      },
-      "p": "occurred in",
-      "o": {
-        "label": "4% of patients in the placebo group",
-        "type": "statistic"
-      }
-    },
-    {
-      "s": {
-        "label": "heart failure",
-        "type": "mainConcept"
-      },
-      "p": "is the leading cause for",
-      "o": {
-        "label": "hospital readmission for older Medicare beneficiaries",
-        "type": "statistic"
-      }
+      "s": { "label": "automatic layout", "type": "task" },
+      "p": "improves",
+      "o": { "label": "visualization", "type": "concept" }
     }
   ]
 }`;
+
+export const GEMINI_MODELS = [
+  'gemini-2.5-pro',
+  'gemini-2.5-flash'
+];
 
 export const LAYOUTS = {
   TB: 'layoutTB',
   BT: 'layoutBT',
   LR: 'layoutLR',
   RL: 'layoutRL',
-  LR_CURVED: 'layoutLR_CURVED',
+  LR_CURVED: 'layoutLR_CURVED'
 };
 
-// Fix: Updated model name to 'gemini-flash-lite-latest' to align with current Gemini API guidelines.
-export const GEMINI_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-flash-lite-latest'];
+
+// Fix: Added `category` as a valid type with a corresponding color. This
+// ensures nodes from the advanced prompt are rendered correctly instead of
+// falling back to the default color.
+export const NODE_TYPE_COLORS: Record<string, string> = {
+  default: 'bg-gray-700 border-gray-500',
+  library: 'bg-sky-900 border-sky-600',
+  task: 'bg-teal-900 border-teal-600',
+  feature: 'bg-indigo-900 border-indigo-600',
+  concept: 'bg-rose-900 border-rose-600',
+  mainConcept: 'bg-amber-800 border-amber-600',
+  riskFactor: 'bg-red-900 border-red-700',
+  comorbidity: 'bg-orange-900 border-orange-700',
+  mechanism: 'bg-cyan-900 border-cyan-700',
+  insight: 'bg-fuchsia-900 border-fuchsia-700',
+  comparison: 'bg-lime-900 border-lime-700',
+  diagnostic: 'bg-blue-900 border-blue-700',
+  detail: 'bg-stone-800 border-stone-600',
+  treatment: 'bg-green-900 border-green-700',
+  drug: 'bg-emerald-900 border-emerald-700',
+  population: 'bg-purple-900 border-purple-700',
+  statistic: 'bg-pink-900 border-pink-700',
+  category: 'bg-slate-800 border-slate-600',
+  keyConcept: 'bg-yellow-800 border-yellow-600',
+  process: 'bg-cyan-800 border-cyan-600',
+  property: 'bg-indigo-800 border-indigo-600',
+  method: 'bg-teal-800 border-teal-600',
+  finding: 'bg-fuchsia-800 border-fuchsia-600',
+  implication: 'bg-rose-800 border-rose-600',
+  example: 'bg-lime-800 border-lime-600',
+};
+
+export const NODE_WIDTH = 200;

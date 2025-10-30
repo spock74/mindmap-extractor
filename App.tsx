@@ -1,11 +1,4 @@
 
-
-
-
-
-
-
-
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -429,10 +422,12 @@ function App() {
     return { nodes: initialNodes, edges };
   };
     
-  const processJsonAndSetGraph = useCallback((jsonString: string): string | null => {
+  const processJsonAndSetGraph = useCallback((jsonString: string, options: { preservePreprocessedText?: boolean } = {}): string | null => {
     setError(null);
     setGraphElements(null);
-    setPreprocessedText(null); // Clear preprocessed text for manual/history loads
+    if (!options.preservePreprocessedText) {
+      setPreprocessedText(null); // Clear preprocessed text for manual/history loads
+    }
     try {
       // New: Clean the string to remove potential markdown fences from AI response.
       let cleanJsonString = jsonString.trim();
@@ -563,7 +558,7 @@ function App() {
       if (generationCancelledRef.current) return;
       
       setLoadingMessage("loadingMessageProcessing");
-      const finalJsonString = processJsonAndSetGraph(jsonString);
+      const finalJsonString = processJsonAndSetGraph(jsonString, { preservePreprocessedText: true });
 
       if (finalJsonString) {
         const newHistoryItem: HistoryItem = {
@@ -1030,10 +1025,9 @@ function App() {
                         </pre>
                     </div>
                 ) : (
-                    <div 
-                        className="overflow-y-auto flex-grow bg-gray-900 p-3 rounded-md text-gray-300 text-sm leading-relaxed prose prose-invert prose-sm"
-                        dangerouslySetInnerHTML={{ __html: marked.parse(activeTrace.quote) }}
-                    />
+                    <div className="overflow-y-auto flex-grow bg-gray-900 p-3 rounded-md flex items-center justify-center">
+                       <p className="text-gray-500 text-sm italic text-center">{t('traceabilityDrawerFullContextUnavailable')}</p>
+                    </div>
                 )}
             </>
         )}

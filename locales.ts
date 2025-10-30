@@ -47,6 +47,7 @@ export const pt = {
   traceabilityDrawerTitle: "Origem do Texto",
   traceabilityDrawerEmpty: "Nenhuma citação de origem disponível para este nó.",
   traceabilityDrawerLinesLabel: "Linhas de Referência:",
+  traceabilityDrawerFullContextUnavailable: "O contexto de texto completo não está disponível para esta visualização (ex: carregado do histórico).",
 };
 
 export const en = {
@@ -98,4 +99,5 @@ export const en = {
   traceabilityDrawerTitle: "Text Origin",
   traceabilityDrawerEmpty: "No source quote available for this node.",
   traceabilityDrawerLinesLabel: "Reference Lines:",
+  traceabilityDrawerFullContextUnavailable: "Full text context is not available for this view (e.g., loaded from history).",
 };
