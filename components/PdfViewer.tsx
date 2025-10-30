@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { useI18n } from '../i18n';
@@ -45,15 +43,12 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ file, highlightText }) => 
       canvas.height = viewport.height;
       canvas.width = viewport.width;
 
-      // FIX: The project's TypeScript definitions for `pdfjs-dist` appear to be incorrect,
-      // causing a compile error that claims the `canvas` property is required for `render`.
-      // The actual pdf.js runtime uses `canvasContext`. We provide both to satisfy the
-      // faulty type checker, and the runtime will ignore the extra `canvas` property.
+      // FIX: The `@ts-expect-error` directive was unused, indicating that the type
+      // definitions for `pdfjs-dist` likely no longer have the issue that required a
+      // workaround. The `render` method correctly accepts `canvasContext`.
       const renderContext = {
         canvasContext: context,
         viewport: viewport,
-        // @ts-expect-error - Add the 'canvas' property to satisfy the incorrect type definition.
-        canvas: canvas,
       };
       await page.render(renderContext).promise;
       

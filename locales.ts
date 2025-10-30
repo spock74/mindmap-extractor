@@ -1,4 +1,5 @@
 
+
 export const pt = {
   appTitle: "Graphfy",
   appDescription: "Visualize grafos de conhecimento de documentos JSON ou texto usando Gemini.",
@@ -30,6 +31,9 @@ export const pt = {
   deleteSelectedButton: "Apagar Nós Selecionados",
   collapseSelectedButton: "Recolher Selecionados",
   expandSelectedButton: "Expandir Selecionados",
+  groupSelectedButton: "Agrupar Selecionados",
+  ungroupButton: "Desagrupar",
+  groupNamePrompt: "Digite um nome para o grupo:",
   loadingMessageReadingFile: "Lendo conteúdo do arquivo...",
   loadingMessageGenerating: "Gerando grafo com Gemini AI...",
   loadingMessageProcessing: "Processando dados do grafo...",
@@ -85,6 +89,9 @@ export const en = {
   deleteSelectedButton: "Delete Selected Nodes",
   collapseSelectedButton: "Collapse Selected",
   expandSelectedButton: "Expand Selected",
+  groupSelectedButton: "Group Selected",
+  ungroupButton: "Ungroup",
+  groupNamePrompt: "Enter a name for the group:",
   loadingMessageReadingFile: "Reading file content...",
   loadingMessageGenerating: "Generating graph with Gemini AI...",
   loadingMessageProcessing: "Processing graph data...",

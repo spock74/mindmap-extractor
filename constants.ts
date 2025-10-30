@@ -1,4 +1,5 @@
 
+
 export const PROMPT_TEMPLATES = [
   {
     id: 'extracao-simples-com-rastreabilidade',
@@ -217,6 +218,7 @@ export const NODE_TYPE_COLORS: Record<string, string> = {
   propedeutics: 'bg-purple-800 border-purple-600',
   question: 'bg-pink-800 border-pink-600',
   symptom: 'bg-orange-800 border-orange-600',
+  group: 'bg-gray-700/50 border-gray-500 border-dashed',
 };
 
 export const NODE_WIDTH = 200;

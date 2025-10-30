@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -10,6 +11,7 @@ import ReactFlow, {
   Node,
   Edge,
   MarkerType,
+  Position,
 } from 'reactflow';
 import * as pdfjsLib from 'pdfjs-dist';
 import { ZodError } from 'zod';
@@ -17,7 +19,7 @@ import { ZodError } from 'zod';
 import { getLayoutedElements } from './utils/layout';
 import { TripletJsonDataSchema, KnowledgeBaseJsonDataSchema, GraphJsonDataSchema } from './utils/schema';
 import { TripletJsonData, KnowledgeBaseJsonData, Triplet, HistoryItem, KnowledgeBaseConcept, GraphJsonData, GraphNode } from './types';
-import { DEFAULT_JSON_DATA, GEMINI_MODELS, NODE_TYPE_COLORS, LAYOUTS, PROMPT_TEMPLATES } from './constants';
+import { DEFAULT_JSON_DATA, GEMINI_MODELS, NODE_TYPE_COLORS, LAYOUTS, PROMPT_TEMPLATES, NODE_WIDTH } from './constants';
 import { CustomNode } from './components/CustomNode';
 import { PdfViewer } from './components/PdfViewer';
 import { useI18n } from './i18n';
@@ -319,6 +321,8 @@ function App() {
         isCollapsed: collapsedNodeIds.has(node.id),
         onToggle: handleNodeToggle,
         onTrace: handleNodeTrace,
+        onUngroup: handleUngroupNode,
+        ungroupLabel: t('ungroupButton'),
       }
     }));
       
@@ -338,7 +342,7 @@ function App() {
     setIsLoading(false);
     setLoadingMessage('');
 
-  }, [graphElements, layout, labelFilter, typeFilters, edgeLabelFilter, collapsedNodeIds, setNodes, setEdges, getAllDescendants]);
+  }, [graphElements, layout, labelFilter, typeFilters, edgeLabelFilter, collapsedNodeIds, setNodes, setEdges, getAllDescendants, t]);
 
     
   const processTriplets = (data: TripletJsonData): { nodes: Node<GraphNode>[], edges: Edge[] } => {
@@ -683,6 +687,71 @@ function App() {
     });
   }, [selectedNodeIds]);
 
+  const handleGroupSelectedNodes = useCallback(() => {
+    if (selectedNodeIds.length < 2 || !graphElements) return;
+    const groupName = window.prompt(t('groupNamePrompt'));
+    if (!groupName) return;
+
+    const groupId = `group-${Date.now()}`;
+    const selectedNodes = graphElements.nodes.filter(n => selectedNodeIds.includes(n.id));
+    
+    // Simple average position for the new group node
+    const avgX = selectedNodes.reduce((sum, n) => sum + (n.position?.x || 0), 0) / selectedNodes.length;
+    const avgY = selectedNodes.reduce((sum, n) => sum + (n.position?.y || 0), 0) / selectedNodes.length;
+    
+    const groupNode: Node<GraphNode> = {
+      id: groupId,
+      type: 'custom',
+      data: {
+        id: groupId,
+        label: groupName,
+        type: 'group',
+      },
+      position: { x: avgX, y: avgY },
+      style: {
+        width: NODE_WIDTH * 2,
+        height: 200,
+        backgroundColor: 'rgba(107, 114, 128, 0.1)',
+        borderColor: 'rgb(107, 114, 128)',
+        borderStyle: 'dashed',
+      },
+    };
+
+    const updatedNodes = graphElements.nodes.map(n => {
+      if (selectedNodeIds.includes(n.id)) {
+        return { ...n, parentNode: groupId, extent: 'parent' as const };
+      }
+      return n;
+    });
+
+    setGraphElements(prev => ({
+        ...prev!,
+        nodes: [...updatedNodes, groupNode]
+    }));
+    setSelectedNodeIds([]);
+  }, [selectedNodeIds, graphElements, t]);
+
+  const handleUngroupNode = useCallback((groupId: string) => {
+    if (!graphElements) return;
+
+    const nodesToRelease = graphElements.nodes.filter(n => n.parentNode === groupId);
+    const updatedNodes = graphElements.nodes
+        .filter(n => n.id !== groupId) // Remove the group node
+        .map(n => {
+            if (n.parentNode === groupId) {
+                // Release the node from the parent
+                const { parentNode, ...rest } = n;
+                return rest;
+            }
+            return n;
+        });
+
+    setGraphElements(prev => ({
+        ...prev!,
+        nodes: updatedNodes,
+    }));
+  }, [graphElements]);
+
   const handleNodeToggle = useCallback((nodeId: string) => {
     setCollapsedNodeIds(prev => {
         const newSet = new Set(prev);
@@ -986,6 +1055,13 @@ function App() {
                             className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
                         >
                             {t('expandSelectedButton')}
+                        </button>
+                        <button
+                            onClick={handleGroupSelectedNodes}
+                            disabled={selectedNodeIds.length < 2}
+                            className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
+                        >
+                            {t('groupSelectedButton')}
                         </button>
                         <button
                             onClick={handleDeleteSelectedNodes}

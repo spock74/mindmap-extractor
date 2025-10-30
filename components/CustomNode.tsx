@@ -67,12 +67,35 @@ export const CustomNode: React.FC<NodeProps> = memo(({ id, data }) => {
       data.onToggle(id);
     }
   };
+  
+  const handleUngroup = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if(data.onUngroup) {
+        data.onUngroup(id);
+    }
+  }
 
   const handleTrace = () => {
     if (data.onTrace) {
         data.onTrace(data);
     }
   };
+  
+  if (data.type === 'group') {
+    return (
+        <div 
+            className={`px-4 py-2 shadow-md rounded-md border-2 text-white ${colorClass} flex flex-col items-center justify-center`}
+        >
+            <div className="text-sm font-bold text-gray-200">{data.label}</div>
+            <button
+                onClick={handleUngroup}
+                className="mt-2 text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-md transition-colors"
+            >
+                {data.ungroupLabel || 'Ungroup'}
+            </button>
+        </div>
+    );
+  }
 
 
   return (

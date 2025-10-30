@@ -1,4 +1,5 @@
 
+
 export interface S_O_Node {
   label: string;
   type?: string;
@@ -65,6 +66,8 @@ export interface GraphNode {
     isCollapsed?: boolean;
     onToggle?: (id: string) => void;
     onTrace?: (nodeData: GraphNode) => void;
+    onUngroup?: (id: string) => void;
+    ungroupLabel?: string;
 }
 
 export interface GraphEdge {
