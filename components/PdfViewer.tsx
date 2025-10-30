@@ -43,10 +43,12 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ file, highlightText }) => 
       canvas.height = viewport.height;
       canvas.width = viewport.width;
 
-      // FIX: Satisfy the RenderParameters type which requires the `canvas` property in this environment.
+      // Fix: Added the `canvas` property to `renderContext` to resolve the TypeScript error.
+      // The error indicates that `RenderParameters` expects this property in the current environment.
       const renderContext = {
         canvasContext: context,
         viewport: viewport,
+        canvas: canvas,
       };
       await page.render(renderContext).promise;
       

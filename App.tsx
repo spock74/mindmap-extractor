@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -846,10 +847,12 @@ function App() {
         </button>
       
       <div className={`absolute top-0 left-0 h-full w-full md:w-1/3 lg:w-1/4 p-4 flex flex-col bg-gray-900 border-r border-gray-700 shadow-lg z-20 transform transition-transform duration-300 ease-in-out ${isControlDrawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <header className="mb-4 flex-shrink-0">
-          <h1 className="text-2xl font-bold text-cyan-400">{t('appTitle')}</h1>
-          <p className="text-sm text-gray-400">{t('appDescription')}</p>
-          <div className="mt-4">
+        <header className="mb-4 flex-shrink-0 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-cyan-400">{t('appTitle')}</h1>
+            <p className="text-sm text-gray-400">{t('appDescription')}</p>
+          </div>
+          <div>
               <label htmlFor="language-select" className="text-sm font-medium text-gray-300 mr-2">
                   {t('languageLabel')}:
               </label>
@@ -1132,7 +1135,6 @@ function App() {
                         "{activeTrace.source_quote || t('traceabilityDrawerEmpty')}"
                     </div>
                 </div>
-
                 <div className="flex-grow min-h-0">
                     {pdfFile && activeTrace.source_quote ? (
                       <PdfViewer file={pdfFile} highlightText={activeTrace.source_quote} />
@@ -1151,7 +1153,7 @@ function App() {
             </>
         )}
     </div>
-    </div>
+    </div> 
   );
 }
 
