@@ -1,0 +1,394 @@
+{
+  "result": {
+    "title": "Bases Neurais da Aditividade das Benzodiazepinas (BDZs)",
+    "nodes": [
+      {
+        "id": "benzodiazepinas-adicao",
+        "label": "Bases Neurais da Aditividade das Benzodiazepinas",
+        "type": "mainConcept"
+      },
+      {
+        "id": "bdzs-uso-clinico",
+        "label": "Uso Clínico e Recreacional de BDZs",
+        "type": "category"
+      },
+      {
+        "id": "adiccao-bdzs",
+        "label": "Potencial de Adição das BDZs",
+        "type": "challenge"
+      },
+      {
+        "id": "farmacos-viciantes-comuns",
+        "label": "Mecanismos Comuns de Drogas Viciantes",
+        "type": "category"
+      },
+      {
+        "id": "aumento-dopamina-mesolimbico",
+        "label": "Aumento de Dopamina (DA) no Sistema Mesolímbico",
+        "type": "mechanism"
+      },
+      {
+        "id": "plasticidade-sinaptica-vta",
+        "label": "Adaptações Sinápticas Duradouras no VTA",
+        "type": "mechanism"
+      },
+      {
+        "id": "bdzs-mecanismo-especifico",
+        "label": "Mecanismo Específico de BDZs no VTA",
+        "type": "mechanism"
+      },
+      {
+        "id": "modulacao-positiva-gabaa",
+        "label": "Modulação Positiva dos Receptores GABA-A",
+        "type": "mechanism"
+      },
+      {
+        "id": "interneuronio-vta",
+        "label": "Interneurônios no VTA",
+        "type": "target"
+      },
+      {
+        "id": "desinibicao-neuronal-da",
+        "label": "Desinibição de Neurônios DA",
+        "type": "mechanism"
+      },
+      {
+        "id": "gabaa-subunidade-alfa1",
+        "label": "Receptores GABA-A contendo subunidade α1",
+        "type": "target"
+      },
+      {
+        "id": "plasticidade-evocada-por-droga",
+        "label": "Plasticidade Sináptica Evocada pela Droga",
+        "type": "evidence"
+      },
+      {
+        "id": "reforco-da-droga",
+        "label": "Reforço da Droga",
+        "type": "mechanism"
+      },
+      {
+        "id": "antagonista-flumazenil",
+        "label": "Antagonista Flumazenil (Flu)",
+        "type": "drugClass"
+      },
+      {
+        "id": "mz-mutacao-h101r",
+        "label": "Mutações no sítio de ligação BDZ (α1(H101R))",
+        "type": "evidence"
+      },
+      {
+        "id": "zolpidem",
+        "label": "Zolpidem (ZOL)",
+        "type": "drugClass"
+      },
+      {
+        "id": "l-838-417",
+        "label": "L-838 417",
+        "type": "drugClass"
+      },
+      {
+        "id": "classificacao-drogas-viciantes",
+        "label": "Classificação de Drogas Viciantes",
+        "type": "mechanism"
+      },
+      {
+        "id": "opioides-cannabinoides-ghb",
+        "label": "Grupo 1: Opioides, Canabinoides, GHB",
+        "type": "drugClass"
+      },
+      {
+        "id": "nicotina",
+        "label": "Grupo 2: Nicotina",
+        "type": "drugClass"
+      },
+      {
+        "id": "cocaina-anfetaminas",
+        "label": "Grupo 3: Cocaína e Anfetaminas",
+        "type": "drugClass"
+      },
+      {
+        "id": "target-gaba-opioides",
+        "label": "Alvo: Receptores GPCR em Neurônios GABA",
+        "type": "target"
+      },
+      {
+        "id": "target-acetilcolina-nicotina",
+        "label": "Alvo: Receptores Nicotínicos α4β2",
+        "type": "target"
+      },
+      {
+        "id": "target-transportador-da",
+        "label": "Alvo: Transportadores de DA",
+        "type": "target"
+      },
+      {
+        "id": "ampkrs-sem-glu-r2",
+        "label": "Inserção de AMPARs sem GluR2",
+        "type": "mechanism"
+      },
+      {
+        "id": "efeito-mdz-no-ri",
+        "label": "Aumento do Índice de Retificação (RI) em 24h",
+        "type": "evidence"
+      },
+      {
+        "id": "alfa3-h126r-mutacao",
+        "label": "Mutação α3(H126R)",
+        "type": "evidence"
+      },
+      {
+        "id": "auto-administracao-mdz",
+        "label": "Auto-Administração Oral de Midazolam (MDZ)",
+        "type": "evidence"
+      },
+      {
+        "id": "preferencia-mdz-wt",
+        "label": "Preferência por MDZ em Camundongos WT",
+        "type": "evidence"
+      },
+      {
+        "id": "sem-preferencia-mutante",
+        "label": "Ausência de Preferência em α1(H101R)",
+        "type": "evidence"
+      },
+      {
+        "id": "imunohistoquimica-alfa1",
+        "label": "Expressão Seletiva de α1 em Neurônios GABA",
+        "type": "evidence"
+      },
+      {
+        "id": "efeito-mdz-no-firing-da",
+        "label": "Aumento do Firing de DA Neurônios In Vivo (WT)",
+        "type": "evidence"
+      },
+      {
+        "id": "ausencia-efeito-mdz-mutante",
+        "label": "Ausência de Aumento de Firing em α1(H101R)",
+        "type": "evidence"
+      },
+      {
+        "id": "inhibicao-firing-gaba",
+        "label": "Inibição do Firing de Neurônios GABA por MDZ",
+        "type": "evidence"
+      },
+      {
+        "id": "desalinhamento-desejavel",
+        "label": "Potenciais BDZs com menor risco de adição",
+        "type": "challenge"
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "benzodiazepinas-adicao",
+        "target": "bdzs-uso-clinico",
+        "label": "envolve"
+      },
+      {
+        "id": "e2",
+        "source": "bdzs-uso-clinico",
+        "target": "adiccao-bdzs",
+        "label": "leva a"
+      },
+      {
+        "id": "e3",
+        "source": "benzodiazepinas-adicao",
+        "target": "farmacos-viciantes-comuns",
+        "label": "compartilha características com"
+      },
+      {
+        "id": "e4",
+        "source": "farmacos-viciantes-comuns",
+        "target": "aumento-dopamina-mesolimbico",
+        "label": "é definido por"
+      },
+      {
+        "id": "e5",
+        "source": "farmacos-viciantes-comuns",
+        "target": "plasticidade-sinaptica-vta",
+        "label": "inclui"
+      },
+      {
+        "id": "e6",
+        "source": "bdzs-uso-clinico",
+        "target": "bdzs-mecanismo-especifico",
+        "label": "age via"
+      },
+      {
+        "id": "e7",
+        "source": "bdzs-mecanismo-especifico",
+        "target": "modulacao-positiva-gabaa",
+        "label": "implica em"
+      },
+      {
+        "id": "e8",
+        "source": "modulacao-positiva-gabaa",
+        "target": "interneuronio-vta",
+        "label": "ocorre em"
+      },
+      {
+        "id": "e9",
+        "source": "interneuronio-vta",
+        "target": "desinibicao-neuronal-da",
+        "label": "causa"
+      },
+      {
+        "id": "e10",
+        "source": "desinibicao-neuronal-da",
+        "target": "aumento-dopamina-mesolimbico",
+        "label": "resulta em"
+      },
+      {
+        "id": "e11",
+        "source": "modulacao-positiva-gabaa",
+        "target": "gabaa-subunidade-alfa1",
+        "label": "dependente de"
+      },
+      {
+        "id": "e12",
+        "source": "desinibicao-neuronal-da",
+        "target": "plasticidade-sinaptica-vta",
+        "label": "provoca"
+      },
+      {
+        "id": "e13",
+        "source": "plasticidade-sinaptica-vta",
+        "target": "reforco-da-droga",
+        "label": "subjaz"
+      },
+      {
+        "id": "e14",
+        "source": "benzodiazepinas-adicao",
+        "target": "efeito-mdz-no-ri",
+        "label": "evidenciado por"
+      },
+      {
+        "id": "e15",
+        "source": "efeito-mdz-no-ri",
+        "target": "ampkrs-sem-glu-r2",
+        "label": "reflecte inserção de"
+      },
+      {
+        "id": "e16",
+        "source": "efeito-mdz-no-ri",
+        "target": "antagonista-flumazenil",
+        "label": "bloqueado por"
+      },
+      {
+        "id": "e17",
+        "source": "benzodiazepinas-adicao",
+        "target": "mz-mutacao-h101r",
+        "label": "testado usando"
+      },
+      {
+        "id": "e18",
+        "source": "mz-mutacao-h101r",
+        "target": "desinibicao-neuronal-da",
+        "label": "elimina efeito de MDZ em"
+      },
+      {
+        "id": "e19",
+        "source": "gabaa-subunidade-alfa1",
+        "target": "zolpidem",
+        "label": "seletivamente modulado por"
+      },
+      {
+        "id": "e20",
+        "source": "gabaa-subunidade-alfa1",
+        "target": "l-838-417",
+        "label": "não modulado por"
+      },
+      {
+        "id": "e21",
+        "source": "zolpidem",
+        "target": "plasticidade-sinaptica-vta",
+        "label": "evoca"
+      },
+      {
+        "id": "e22",
+        "source": "l-838-417",
+        "target": "plasticidade-sinaptica-vta",
+        "label": "não evoca"
+      },
+      {
+        "id": "e23",
+        "source": "imunohistoquimica-alfa1",
+        "target": "gabaa-subunidade-alfa1",
+        "label": "confirma expressão em"
+      },
+      {
+        "id": "e24",
+        "source": "imunohistoquimica-alfa1",
+        "target": "interneuronio-vta",
+        "label": "localiza em (GABA neurons)"
+      },
+      {
+        "id": "e25",
+        "source": "inhibicao-firing-gaba",
+        "target": "gabaa-subunidade-alfa1",
+        "label": "dependência da"
+      },
+      {
+        "id": "e26",
+        "source": "inhibicao-firing-gaba",
+        "target": "mz-mutacao-h101r",
+        "label": "ausente em"
+      },
+      {
+        "id": "e27",
+        "source": "efeito-mdz-no-firing-da",
+        "target": "benzodiazepinas-adicao",
+        "label": "correlaciona com"
+      },
+      {
+        "id": "e28",
+        "source": "efeito-mdz-no-firing-da",
+        "target": "ausencia-efeito-mdz-mutante",
+        "label": "contrasta com resultado em"
+      },
+      {
+        "id": "e29",
+        "source": "benzodiazepinas-adicao",
+        "target": "auto-administracao-mdz",
+        "label": "impacto na compulsão testado via"
+      },
+      {
+        "id": "e30",
+        "source": "auto-administracao-mdz",
+        "target": "preferencia-mdz-wt",
+        "label": "observado em"
+      },
+      {
+        "id": "e31",
+        "source": "auto-administracao-mdz",
+        "target": "sem-preferencia-mutante",
+        "label": "ausente em"
+      },
+      {
+        "id": "e32",
+        "source": "opioides-cannabinoides-ghb",
+        "target": "desinibicao-neuronal-da",
+        "label": "causa via"
+      },
+      {
+        "id": "e33",
+        "source": "nicotina",
+        "target": "target-acetilcolina-nicotina",
+        "label": "age via"
+      },
+      {
+        "id": "e34",
+        "source": "cocaina-anfetaminas",
+        "target": "target-transportador-da",
+        "label": "age via"
+      },
+      {
+        "id": "e35",
+        "source": "benzodiazepinas-adicao",
+        "target": "desalinhamento-desejavel",
+        "label": "implica em busca por"
+      }
+    ]
+  }
+}

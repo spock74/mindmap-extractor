@@ -1,0 +1,449 @@
+{
+  "result": {
+    "title": "Bases Neurais das Propriedades Aditivas das Benzodiazepinas",
+    "nodes": [
+      {
+        "id": "benzodiazepines-addictive-properties",
+        "label": "Propriedades Aditivas das Benzodiazepinas",
+        "type": "mainConcept"
+      },
+      {
+        "id": "benzodiazepines",
+        "label": "Benzodiazepinas (BDZs)",
+        "type": "drugClass"
+      },
+      {
+        "id": "mecanismos-centrais",
+        "label": "Mecanismos Centrais de Adição por BDZ",
+        "type": "category"
+      },
+      {
+        "id": "aumento-dopamina-mesolimbica",
+        "label": "Aumento de Dopamina Mesolímbica",
+        "type": "mechanism"
+      },
+      {
+        "id": "disinibicao-neuronio-da-vta",
+        "label": "Disinibição de Neurônios DA na VTA",
+        "type": "mechanism"
+      },
+      {
+        "id": "modulacao-gabaa-interneuronios",
+        "label": "Modulação Positiva de GABAA Rs em Interneurônios",
+        "type": "mechanism"
+      },
+      {
+        "id": "plasticidade-sinaptica-adaptativa",
+        "label": "Plasticidade Sináptica Adaptativa",
+        "type": "mechanism"
+      },
+      {
+        "id": "gabaa-receptores-alpha1-interneuronios",
+        "label": "GABAA Rs contendo α1 em Interneurônios",
+        "type": "target"
+      },
+      {
+        "id": "reforco-droga",
+        "label": "Reforço da Droga",
+        "type": "mechanism"
+      },
+      {
+        "id": "aferentes-excitatorios-neuronio-da",
+        "label": "Aferentes Excitatórios para Neurônios DA",
+        "type": "target"
+      },
+      {
+        "id": "insercao-ampars-sem-glur2",
+        "label": "Inserção de AMPARs sem GluR2",
+        "type": "mechanism"
+      },
+      {
+        "id": "papel-subunidade-alpha1",
+        "label": "Papel Crítico da Subunidade α1",
+        "type": "category"
+      },
+      {
+        "id": "expressao-seletiva-gaba-vta",
+        "label": "Expressão Seletiva em Neurônios GABA do VTA",
+        "type": "evidence"
+      },
+      {
+        "id": "percentual-gaba-alpha1",
+        "label": "81% Neurônios GABA Expressam α1",
+        "type": "evidence"
+      },
+      {
+        "id": "percentual-da-alpha1",
+        "label": "7% Neurônios DA Expressam α1",
+        "type": "evidence"
+      },
+      {
+        "id": "plasticidade-sinaptica-evocada-bdz",
+        "label": "Plasticidade Sináptica Evocada por BDZ",
+        "type": "evidence"
+      },
+      {
+        "id": "aumento-disparo-neuronio-da",
+        "label": "Aumento na Taxa de Disparo de Neurônios DA",
+        "type": "evidence"
+      },
+      {
+        "id": "autoadministracao-mdz",
+        "label": "Autoadministração de Midazolam (MDZ)",
+        "type": "evidence"
+      },
+      {
+        "id": "implicacoes-clinicas",
+        "label": "Implicações Clínicas e Terapêuticas",
+        "type": "category"
+      },
+      {
+        "id": "bdzs-alpha1-poupadores-sem-addiction",
+        "label": "BDZs que poupam α1 sem Potencial Aditivo",
+        "type": "drugClass"
+      },
+      {
+        "id": "zolpidem-potencial-abuso",
+        "label": "Zolpidem (α1-seletivo) tem Potencial de Abuso",
+        "type": "challenge"
+      },
+      {
+        "id": "dissociacao-ansiolise-adiccao",
+        "label": "Dissociação Ansiólise (α2) e Adição (α1)",
+        "type": "mechanism"
+      },
+      {
+        "id": "evidencia-experimental",
+        "label": "Evidência Experimental Chave",
+        "type": "category"
+      },
+      {
+        "id": "camundongos-mutantes-alpha1-h101r",
+        "label": "Camundongos Mutantes α1(H101R)",
+        "type": "evidence"
+      },
+      {
+        "id": "plasticidade-bdz-abolida-alpha1r",
+        "label": "Plasticidade por BDZ Abolida em α1(H101R)",
+        "type": "evidence"
+      },
+      {
+        "id": "aumento-disparo-da-abolido-alpha1r",
+        "label": "Aumento Disparo DA Abolido em α1(H101R)",
+        "type": "evidence"
+      },
+      {
+        "id": "ausencia-preferencia-mdz-alpha1r",
+        "label": "Ausência de Preferência por MDZ em α1(H101R)",
+        "type": "evidence"
+      },
+      {
+        "id": "drogas-farmacologicas-teste",
+        "label": "Ferramentas Farmacológicas de Teste",
+        "type": "evidence"
+      },
+      {
+        "id": "zolpidem-causa-plasticidade",
+        "label": "Zolpidem (α1-seletivo) Causa Plasticidade",
+        "type": "evidence"
+      },
+      {
+        "id": "l838417-nao-causa-plasticidade",
+        "label": "L-838 417 (sem mod. α1) Não Causa Plasticidade",
+        "type": "evidence"
+      },
+      {
+        "id": "estudo-in-vivo-taxa-disparo",
+        "label": "Estudo In Vivo da Taxa de Disparo",
+        "type": "evidence"
+      },
+      {
+        "id": "mdz-aumenta-disparo-da-wt",
+        "label": "MDZ Aumenta Disparo DA em Camundongos WT",
+        "type": "evidence"
+      },
+      {
+        "id": "mdz-inibe-disparo-gaba-wt",
+        "label": "MDZ Inibe Disparo GABA em Camundongos WT",
+        "type": "evidence"
+      },
+      {
+        "id": "contexto-drogas-aditivas",
+        "label": "Contexto de Outras Drogas Aditivas",
+        "type": "category"
+      },
+      {
+        "id": "opioides-canabinoides-ghb",
+        "label": "Opióides, Canabinóides, GHB",
+        "type": "drugClass"
+      },
+      {
+        "id": "mecanismo-disinibicao-gpcr",
+        "label": "Disinibição via GPCRs em Neurônios GABA",
+        "type": "mechanism"
+      },
+      {
+        "id": "nicotina",
+        "label": "Nicotina",
+        "type": "drugClass"
+      },
+      {
+        "id": "despolarizacao-direta-da",
+        "label": "Despolarização Direta de Neurônios DA",
+        "type": "mechanism"
+      },
+      {
+        "id": "cocaina-anfetaminas",
+        "label": "Cocaína, Anfetaminas",
+        "type": "drugClass"
+      },
+      {
+        "id": "alvo-transportadores-da",
+        "label": "Alvo: Transportadores de Dopamina",
+        "type": "target"
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "benzodiazepines-addictive-properties",
+        "target": "mecanismos-centrais",
+        "label": "envolve"
+      },
+      {
+        "id": "e2",
+        "source": "benzodiazepines-addictive-properties",
+        "target": "papel-subunidade-alpha1",
+        "label": "depende-de"
+      },
+      {
+        "id": "e3",
+        "source": "benzodiazepines-addictive-properties",
+        "target": "implicacoes-clinicas",
+        "label": "leva-a"
+      },
+      {
+        "id": "e4",
+        "source": "benzodiazepines-addictive-properties",
+        "target": "evidencia-experimental",
+        "label": "suportado-por"
+      },
+      {
+        "id": "e5",
+        "source": "benzodiazepines-addictive-properties",
+        "target": "contexto-drogas-aditivas",
+        "label": "comparado-com"
+      },
+      {
+        "id": "e6",
+        "source": "benzodiazepines",
+        "target": "benzodiazepines-addictive-properties",
+        "label": "possuem"
+      },
+      {
+        "id": "e7",
+        "source": "mecanismos-centrais",
+        "target": "aumento-dopamina-mesolimbica",
+        "label": "inclui"
+      },
+      {
+        "id": "e8",
+        "source": "mecanismos-centrais",
+        "target": "plasticidade-sinaptica-adaptativa",
+        "label": "inclui"
+      },
+      {
+        "id": "e9",
+        "source": "aumento-dopamina-mesolimbica",
+        "target": "disinibicao-neuronio-da-vta",
+        "label": "ocorre-por"
+      },
+      {
+        "id": "e10",
+        "source": "disinibicao-neuronio-da-vta",
+        "target": "modulacao-gabaa-interneuronios",
+        "label": "via"
+      },
+      {
+        "id": "e11",
+        "source": "disinibicao-neuronio-da-vta",
+        "target": "reforco-droga",
+        "label": "subjaz-a"
+      },
+      {
+        "id": "e12",
+        "source": "modulacao-gabaa-interneuronios",
+        "target": "gabaa-receptores-alpha1-interneuronios",
+        "label": "rege-por"
+      },
+      {
+        "id": "e13",
+        "source": "plasticidade-sinaptica-adaptativa",
+        "target": "aferentes-excitatorios-neuronio-da",
+        "label": "afeta"
+      },
+      {
+        "id": "e14",
+        "source": "plasticidade-sinaptica-adaptativa",
+        "target": "insercao-ampars-sem-glur2",
+        "label": "envolve"
+      },
+      {
+        "id": "e15",
+        "source": "benzodiazepines",
+        "target": "plasticidade-sinaptica-adaptativa",
+        "label": "induzem"
+      },
+      {
+        "id": "e16",
+        "source": "papel-subunidade-alpha1",
+        "target": "expressao-seletiva-gaba-vta",
+        "label": "caracterizado-por"
+      },
+      {
+        "id": "e17",
+        "source": "expressao-seletiva-gaba-vta",
+        "target": "percentual-gaba-alpha1",
+        "label": "detalhes"
+      },
+      {
+        "id": "e18",
+        "source": "expressao-seletiva-gaba-vta",
+        "target": "percentual-da-alpha1",
+        "label": "detalhes"
+      },
+      {
+        "id": "e19",
+        "source": "papel-subunidade-alpha1",
+        "target": "plasticidade-sinaptica-evocada-bdz",
+        "label": "media"
+      },
+      {
+        "id": "e20",
+        "source": "papel-subunidade-alpha1",
+        "target": "aumento-disparo-neuronio-da",
+        "label": "media"
+      },
+      {
+        "id": "e21",
+        "source": "papel-subunidade-alpha1",
+        "target": "autoadministracao-mdz",
+        "label": "influencia"
+      },
+      {
+        "id": "e22",
+        "source": "implicacoes-clinicas",
+        "target": "bdzs-alpha1-poupadores-sem-addiction",
+        "label": "sugere-desenvolvimento-de"
+      },
+      {
+        "id": "e23",
+        "source": "implicacoes-clinicas",
+        "target": "zolpidem-potencial-abuso",
+        "label": "apresenta-desafio"
+      },
+      {
+        "id": "e24",
+        "source": "implicacoes-clinicas",
+        "target": "dissociacao-ansiolise-adiccao",
+        "label": "possibilita"
+      },
+      {
+        "id": "e25",
+        "source": "evidencia-experimental",
+        "target": "camundongos-mutantes-alpha1-h101r",
+        "label": "utiliza"
+      },
+      {
+        "id": "e26",
+        "source": "camundongos-mutantes-alpha1-h101r",
+        "target": "plasticidade-bdz-abolida-alpha1r",
+        "label": "resulta-em"
+      },
+      {
+        "id": "e27",
+        "source": "camundongos-mutantes-alpha1-h101r",
+        "target": "aumento-disparo-da-abolido-alpha1r",
+        "label": "resulta-em"
+      },
+      {
+        "id": "e28",
+        "source": "camundongos-mutantes-alpha1-h101r",
+        "target": "ausencia-preferencia-mdz-alpha1r",
+        "label": "resulta-em"
+      },
+      {
+        "id": "e29",
+        "source": "evidencia-experimental",
+        "target": "drogas-farmacologicas-teste",
+        "label": "inclui"
+      },
+      {
+        "id": "e30",
+        "source": "drogas-farmacologicas-teste",
+        "target": "zolpidem-causa-plasticidade",
+        "label": "exemplo"
+      },
+      {
+        "id": "e31",
+        "source": "drogas-farmacologicas-teste",
+        "target": "l838417-nao-causa-plasticidade",
+        "label": "exemplo"
+      },
+      {
+        "id": "e32",
+        "source": "evidencia-experimental",
+        "target": "estudo-in-vivo-taxa-disparo",
+        "label": "inclui"
+      },
+      {
+        "id": "e33",
+        "source": "estudo-in-vivo-taxa-disparo",
+        "target": "mdz-aumenta-disparo-da-wt",
+        "label": "observa-que"
+      },
+      {
+        "id": "e34",
+        "source": "estudo-in-vivo-taxa-disparo",
+        "target": "mdz-inibe-disparo-gaba-wt",
+        "label": "observa-que"
+      },
+      {
+        "id": "e35",
+        "source": "contexto-drogas-aditivas",
+        "target": "opioides-canabinoides-ghb",
+        "label": "inclui"
+      },
+      {
+        "id": "e36",
+        "source": "opioides-canabinoides-ghb",
+        "target": "mecanismo-disinibicao-gpcr",
+        "label": "mecanismo"
+      },
+      {
+        "id": "e37",
+        "source": "contexto-drogas-aditivas",
+        "target": "nicotina",
+        "label": "inclui"
+      },
+      {
+        "id": "e38",
+        "source": "nicotina",
+        "target": "despolarizacao-direta-da",
+        "label": "mecanismo"
+      },
+      {
+        "id": "e39",
+        "source": "contexto-drogas-aditivas",
+        "target": "cocaina-anfetaminas",
+        "label": "inclui"
+      },
+      {
+        "id": "e40",
+        "source": "cocaina-anfetaminas",
+        "target": "alvo-transportadores-da",
+        "label": "mecanismo"
+      }
+    ]
+  }
+}
