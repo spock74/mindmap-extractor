@@ -1,61 +1,65 @@
-# `Extração e Visualizador de Grafo de Conhecimento com IA
+# Xphy: Knowledge Graph Visualization & Causal Extraction Engine
 
-Este é um aplicativo web interativo que extrai dados de textos científicos e os transforma em JSON estruturados ou texto bruto de documentos em grafos de conhecimento e mapas mentais dinâmicos e fáceis de explorar. Utilizando a API do Google Gemini, a aplicação pode extrair relações semânticas de arquivos `.pdf`, `.txt` ou `.md` e visualizá-las instantaneamente.
+**Xphy** (pronuncia-se _ex-phy_) é uma plataforma de desenvolvimento e visualização para a engenharia de conhecimento guiada por IA. A ferramenta foi projetada para transformar documentos não estruturados, como artigos científicos, em Grafos de Conhecimento (KGs) auditáveis e semanticamente ricos.
 
-## Principais Funcionalidades
+A aplicação integra um back-end de IA de ponta, construído com o SDK dos modelos da família **Gemini**, com uma interface interativa que permite a extração, visualização, validação e curação de relações causais e outras entidades semânticas.
 
-- **Geração de Grafo com IA:** Faça o upload de um documento (`.pdf`, `.txt`, `.md`), forneça um prompt e use a API do Gemini para extrair e visualizar um grafo de conhecimento automaticamente.
-- **Visualização a partir de JSON:** Cole um JSON de "tripletas" (sujeito-predicado-objeto) para renderizá-lo instantaneamente como um grafo.
-- **Layouts Automáticos:** Alterne entre múltiplas direções de layout (de cima para baixo, da esquerda para a direita, etc.) com um clique, graças à integração com a biblioteca Dagre.
-- **Filtragem Interativa:** Filtre dinamicamente os nós do grafo por seu rótulo (conteúdo de texto) ou por seu tipo (ex: `drug`, `population`), permitindo focar em informações específicas.
-- **Nós Personalizados e Estilizados:** Os nós são coloridos com base em seu tipo, tornando a visualização intuitiva e fácil de interpretar.
-- **Controles de Navegação:** Inclui controles de zoom, pan e um minimapa para uma navegação fluida em grafos grandes.
-- **Histórico de Gerações:** Os grafos gerados pela IA são salvos no seu navegador, permitindo que você os recarregue, visualize ou exclua em sessões futuras.
-- **Validação Robusta:** As entradas JSON são validadas em tempo real usando Zod para garantir que os dados estejam no formato correto antes da renderização.
-- **Internacionalização (i18n):** A interface da aplicação está disponível em Português (padrão) e Inglês. Use o seletor de idiomas na barra lateral para alternar entre os idiomas.
+_(**Nota:** Substitua este link de imagem pelo link real de uma captura de tela de alta qualidade da sua aplicação)._
 
-## Pilha de Tecnologia
+## Visão Geral da Arquitetura
 
-- **Frontend:** React, TypeScript
-- **Visualização de Grafo:** React Flow
-- **Layout Automático:** Dagre.js
-- **Estilização:** Tailwind CSS
-- **Geração de Conhecimento:** Google Gemini API
-- **Leitura de PDF:** PDF.js
-- **Validação de Esquema:** Zod
-- **Ambiente:** Aplicação sem build, utilizando `importmap` para carregar dependências diretamente no navegador a partir de um CDN.
+O Xphy não é apenas um "wrapper" para um LLM. É um ambiente de desenvolvimento integrado (IDE) para um fluxo de trabalho de IA Centrada em Dados (_Data-Centric AI_), baseado nos seguintes princípios:
 
-## Como Usar
+1.  **Extração Guiada por Ontologia:** Em vez de confiar em prompts abertos e não estruturados, a extração de conhecimento é governada por um **prompt mestre** que é derivado de uma ontologia formal (neste caso, uma ontologia de relações causais). Isso força o LLM a operar dentro de um schema definido, garantindo consistência, reduzindo a ambiguidade e minimizando o risco de alucinações.
 
-### Opção 1: Gerar um Grafo a partir de um Documento (com IA)
+2.  **Saída Estruturada e Validável:** O sistema força o LLM a gerar sua saída em um formato JSON estrito, alinhado com a ontologia. Cada fato extraído (`CausalEvent`) é um objeto rico que contém não apenas a tríade (Agente, Relação, Entidade Afetada), mas também metadados cruciais como o mecanismo, o tipo de evidência e a citação textual que o suporta.
 
-1.  Na barra lateral, selecione a aba **"Generate"**.
-2.  Escolha o modelo do Gemini que deseja usar (ex: `gemini-2.5-flash`).
-3.  Clique em **"Click to select a file"** para fazer o upload de um documento (`.pdf`, `.txt` ou `.md`).
-4.  Opcional: Edite o prompt na área de texto para instruir a IA sobre como extrair as informações. O prompt padrão é otimizado para análise de artigos científicos.
-5.  Clique no botão **"Generate with AI"**. A aplicação irá ler o arquivo, enviar o conteúdo e o prompt para a IA e, em seguida, renderizar o grafo com a resposta.
+3.  **Rastreabilidade e Auditabilidade Interativa:** Acreditamos que a confiança em um sistema de IA não é negociável. O Xphy implementa a rastreabilidade como uma funcionalidade central: cada nó e aresta no grafo de conhecimento visualizado é diretamente vinculado à sua sentença de origem no documento fonte. Um clique em qualquer entidade no grafo leva o usuário instantaneamente à evidência textual, permitindo a validação e a curação humana em segundos.
 
-### Opção 2: Visualizar a partir de um JSON Manual
+4.  **Criação de um Ciclo Virtuoso (Flywheel):** A plataforma é projetada para ser mais do que uma ferramenta de extração; é um ambiente de curação. Ao permitir a verificação e correção dos KGs gerados pela IA, o Xphy se torna uma fábrica para a criação de "golden datasets", que podem ser usados para o fine-tuning de modelos de linguagem especializados, melhorando continuamente a precisão e a automação do sistema.
 
-1.  Na barra lateral, selecione a aba **"Manual"**.
-2.  Cole sua estrutura JSON na área de texto. O JSON deve conter um array chamado `triplets`.
-3.  Clique no botão **"Generate Graph"**.
+## Funcionalidades Principais
 
-### Interagindo com o Grafo
+- **Motor de Extração com Genkit:** Utiliza ainda Gemini SDK js-genai. Porém, em breve estará usanso o framework [Genkit](https://github.com/firebase/genkit) do Google para orquestrar `Flows` de IA, garantindo observabilidade e escalabilidade.
+- **Prompting Estruturado:** Suporte para modelos de prompt que forçam a saída em JSON, com base em ontologias e schemas Zod.
+- **Visualização de Grafos Interativa:** Renderização em tempo real do JSON extraído como um grafo de conhecimento, com controles de layout e filtros.
+- **Rastreabilidade "Click-to-Source":** Link direto entre cada entidade do grafo e sua citação no documento original, com destaque de texto.
+- **Suporte a Múltiplos Modelos:** Facilmente configurável para usar os modelos mais recentes da família Gemini (e outros, via plugins do Genkit).
 
-- **Mudar o Idioma:** Use o seletor de idiomas no cabeçalho da barra lateral.
-- **Mudar o Layout:** Use os botões na seção "Layout Direction" para reorganizar o grafo.
-- **Filtrar Nós:** Use a seção "Filters" para buscar nós por texto no rótulo ou para mostrar/ocultar nós com base em seu tipo.
+## Roadmap de Desenvolvimento
 
-## Estrutura do Projeto
+O Xphy é um projeto em evolução ativa. Nosso roadmap está focado em aprofundar as capacidades de curação e escalar a plataforma para aplicações de nível empresarial.
 
-- `index.html`: O ponto de entrada da aplicação. Configura o `importmap` para carregar todas as dependências via CDN.
-- `index.tsx`: O ponto de montagem do React.
-- `App.tsx`: O componente principal que contém toda a lógica da aplicação, incluindo gerenciamento de estado, chamadas de API, manipulação de eventos e renderização da UI.
-- `i18n.tsx`: Contém o provider de contexto e o hook customizado para o sistema de internacionalização.
-- `locales.ts`: Armazena as traduções em formato de objeto para os idiomas suportados.
-- `components/CustomNode.tsx`: Define o componente de nó personalizado para o React Flow, com estilização baseada no tipo do nó.
-- `utils/layout.ts`: Contém a lógica para calcular as posições dos nós e arestas usando a biblioteca Dagre.
-- `utils/schema.ts`: Define o esquema de validação Zod para garantir a integridade dos dados JSON.
-- `constants.ts`: Armazena constantes utilizadas em toda a aplicação, como dados JSON padrão, cores e modelos de IA.
-- `types.ts`: Define as interfaces TypeScript para as estruturas de dados do projeto.
+- [ ] **Fase 1: Aprimoramento da Curação e UX**
+
+  - [ ] **Edição In-Grafo:** Implementar um overlay de edição contextual para nós e arestas, permitindo que curadores humanos corrijam extrações diretamente na interface visual.
+  - [ ] **Versionamento de Correções:** Desenvolver um sistema de back-end que salva as correções como `diffs`, criando um histórico de auditoria completo para cada grafo de conhecimento.
+  - [ ] **Visualização de Metadados:** Renderizar o `confidenceScore` visualmente no grafo (ex: através da cor da borda do nó) para guiar a atenção do revisor.
+  - [ ] **Rótulos Inteligentes:** Usar o campo `normalizedLabel` para a exibição principal no grafo, mostrando o `label` completo em um tooltip para uma interface mais limpa.
+
+- [ ] **Fase 2: Escalabilidade e Pipeline de Dados**
+
+  - [ ] **Processamento em Lote:** Desenvolver uma funcionalidade para processar múltiplos documentos em uma única execução.
+  - [ ] **Persistência em Banco de Dados de Grafos:** Criar conectores para inserir os KGs extraídos e curados em bancos de dados como Neo4j ou TigerGraph.
+  - [ ] **API de Consulta de Grafos:** Expor uma API GraphQL ou REST para permitir que outras aplicações consultem o conhecimento persistido.
+
+- [ ] **Fase 3: Inteligência Ativa e Graph RAG**
+  - [ ] **Pipeline de Fine-Tuning:** Criar scripts para formatar os "golden datasets" (extrações corrigidas) para o fine-tuning de modelos Gemini.
+  - [ ] **Mecanismo de Graph RAG:** Implementar um `Flow` que traduz uma pergunta em linguagem natural para uma consulta no grafo, recupera os fatos relevantes (incluindo as citações de suporte) e usa um LLM para sintetizar uma resposta auditável.
+  - [ ] **Detecção de Anomalias:** Integrar um pipeline de embedding e clusterização para sinalizar extrações que são outliers estatísticos, servindo como um "sistema de alerta de novidade" para os curadores.
+
+## Como Contribuir
+
+Estamos abertos a contribuições da comunidade! Se você é um engenheiro de IA, desenvolvedor de front-end, ou um especialista de domínio interessado em engenharia de conhecimento, sua ajuda é bem-vinda.
+
+1.  **Fork** este repositório.
+2.  **Crie** uma nova branch para sua feature (`git checkout -b feature/minha-feature`).
+3.  **Faça o commit** de suas mudanças (`git commit -m 'Adiciona minha-feature'`).
+4.  **Faça o push** para a branch (`git push origin feature/minha-feature`).
+5.  **Abra** um Pull Request.
+
+Por favor, abra uma _issue_ para discutir mudanças significativas antes de iniciar o trabalho.
+
+## Licença
+
+Este projeto é licenciado sob a **Licença MIT**. Veja o arquivo `LICENSE` para mais detalhes.
