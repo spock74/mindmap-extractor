@@ -1219,12 +1219,10 @@ function App() {
         </button>
       
       <div className={`absolute top-0 left-0 h-full w-full md:w-1/3 lg:w-1/4 p-4 flex flex-col bg-gray-900 border-r border-gray-700 shadow-lg z-20 transform transition-transform duration-300 ease-in-out ${isControlDrawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <header className="mb-4 flex-shrink-0 flex items-center justify-between">
-          <div>
+        <header className="mb-4 flex-shrink-0">
+          <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-cyan-400">{t('appTitle')}</h1>
-            <p className="text-sm text-gray-400">{t('appDescription')}</p>
-          </div>
-          <div>
+            <div className="flex items-center">
               <label htmlFor="language-select" className="text-sm font-medium text-gray-300 mr-2">
                   {t('languageLabel')}:
               </label>
@@ -1237,7 +1235,9 @@ function App() {
                   <option value="pt">Português (Brasil)</option>
                   <option value="en">English</option>
               </select>
+            </div>
           </div>
+          <p className="text-sm text-gray-400 mt-1">{t('appDescription')}</p>
         </header>
 
         <div className="flex border-b border-gray-700 mb-4 flex-shrink-0">
@@ -1337,7 +1337,7 @@ function App() {
                           <label htmlFor="prompt-input" className="text-sm font-medium text-gray-300 mb-2">
                               {t('promptLabel')}
                           </label>
-                          <textarea id="prompt-input" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full flex-grow p-3 bg-sky-950/50 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder={t('promptPlaceholder')} />
+                          <textarea id="prompt-input" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full flex-grow p-3 border border-gray-600 rounded-md text-gray-800 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder={t('promptPlaceholder')} style={{ backgroundColor: '#ffefde' }} />
                       </div>
                       
                       <div>
