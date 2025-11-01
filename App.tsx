@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -25,6 +27,7 @@ import { PdfViewer } from './components/PdfViewer';
 import { useI18n } from './i18n';
 import { breakCycles } from './utils/graph';
 import { preprocessText, parseLineNumbers } from './utils/text';
+import { extractJsonFromString } from './utils/json';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdfjs-dist/build/pdf.worker.min.mjs';
 
@@ -344,6 +347,18 @@ const ChevronDownIcon = ({ isOpen }: { isOpen: boolean }) => (
     </svg>
 );
 
+const ChevronLeftIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
+);
+const ChevronRightIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+);
+
+const PDF_DRAWER_WIDTH = '60vw';
 
 function App() {
   const { t, language, setLanguage } = useI18n();
@@ -371,47 +386,56 @@ function App() {
   const [preprocessedText, setPreprocessedText] = useState<string | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   
-  const [isResizing, setIsResizing] = useState(false);
-  const [drawerWidth, setDrawerWidth] = useState(window.innerWidth / 3);
-  const drawerRef = useRef<HTMLDivElement>(null);
   const [isControlDrawerOpen, setIsControlDrawerOpen] = useState(true);
+  const [isPdfDrawerOpen, setIsPdfDrawerOpen] = useState(false);
   
   const [highlightedNode, setHighlightedNode] = useState<string | null>(null);
   const [isTraceInfoPanelOpen, setIsTraceInfoPanelOpen] = useState(false);
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsResizing(true);
-  };
+  const pdfDrawerRef = useRef<HTMLDivElement>(null);
+  const dragInfo = useRef({ isDragging: false, startX: 0, startTranslateX: 0 });
 
-  const handleMouseUp = useCallback(() => {
-    setIsResizing(false);
+  const handlePdfDrawerDragStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+      dragInfo.current = {
+          isDragging: true,
+          startX: e.clientX,
+          startTranslateX: 0, // We assume it starts fully open (translateX=0)
+      };
+      if (pdfDrawerRef.current) {
+          pdfDrawerRef.current.style.transition = 'none'; // Disable transition for smooth dragging
+      }
+      window.addEventListener('mousemove', handlePdfDrawerDragMove);
+      window.addEventListener('mouseup', handlePdfDrawerDragEnd);
   }, []);
-  
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (isResizing) {
-        const newWidth = window.innerWidth - e.clientX;
-        const minWidth = 300;
-        const maxWidth = window.innerWidth * 0.8;
-        if (newWidth > minWidth && newWidth < maxWidth) {
-            setDrawerWidth(newWidth);
-        }
-    }
-  }, [isResizing]);
 
-  useEffect(() => {
-    if (isResizing) {
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
-    } else {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-    }
-    return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing, handleMouseMove, handleMouseUp]);
+  const handlePdfDrawerDragMove = useCallback((e: MouseEvent) => {
+      if (!dragInfo.current.isDragging || !pdfDrawerRef.current) return;
+      
+      const deltaX = e.clientX - dragInfo.current.startX;
+      const newTranslateX = Math.max(0, dragInfo.current.startTranslateX + deltaX); // Only allow dragging to the right (to close)
+      
+      pdfDrawerRef.current.style.transform = `translateX(${newTranslateX}px)`;
+  }, []);
+
+  const handlePdfDrawerDragEnd = useCallback((e: MouseEvent) => {
+      if (!dragInfo.current.isDragging || !pdfDrawerRef.current) return;
+
+      dragInfo.current.isDragging = false;
+      window.removeEventListener('mousemove', handlePdfDrawerDragMove);
+      window.removeEventListener('mouseup', handlePdfDrawerDragEnd);
+
+      const drawerWidth = pdfDrawerRef.current.offsetWidth;
+      const currentTranslateX = new DOMMatrix(getComputedStyle(pdfDrawerRef.current).transform).m41;
+      
+      pdfDrawerRef.current.style.transition = 'transform 0.3s ease-in-out';
+
+      // If dragged more than 1/3 of the way, close it. Otherwise, snap back open.
+      if (currentTranslateX > drawerWidth / 3) {
+          setIsPdfDrawerOpen(false);
+      } else {
+          pdfDrawerRef.current.style.transform = `translateX(0px)`;
+      }
+  }, []);
 
 
   const availableTypes = useMemo(() => {
@@ -851,11 +875,7 @@ function App() {
       setPdfFile(null);
     }
     try {
-      let cleanJsonString = jsonString.trim();
-      const markdownMatch = /```(?:json)?\s*([\s\S]*?)\s*```/.exec(cleanJsonString);
-      if (markdownMatch) {
-        cleanJsonString = markdownMatch[1];
-      }
+      const cleanJsonString = extractJsonFromString(jsonString);
       
       let parsedJson = JSON.parse(cleanJsonString);
       let finalJsonToStore = cleanJsonString;
@@ -1174,6 +1194,7 @@ function App() {
   const handleNodeTrace = useCallback((nodeData: GraphNode) => {
     setActiveTrace(nodeData);
     setIsTraceInfoPanelOpen(true);
+    setIsPdfDrawerOpen(true);
   }, []);
 
   const handlePromptSelect = (promptId: string) => {
@@ -1561,17 +1582,23 @@ function App() {
       <main className="w-full h-full">
         {reactFlowInstance}
       </main>
+      <button
+          onClick={() => setIsPdfDrawerOpen(!isPdfDrawerOpen)}
+          className="absolute top-1/2 -translate-y-1/2 bg-gray-700 hover:bg-gray-600 text-white rounded-l-full w-8 h-16 flex items-center justify-center z-30 transition-all duration-300 ease-in-out"
+          style={{ right: isPdfDrawerOpen ? `calc(${PDF_DRAWER_WIDTH} - 1px)` : '0', transform: isPdfDrawerOpen ? 'translateX(0)' : 'translateX(50%)' }}
+          title={t(isPdfDrawerOpen ? 'closePdfDrawerTooltip' : 'openPdfDrawerTooltip')}
+          aria-label={t(isPdfDrawerOpen ? 'closePdfDrawerTooltip' : 'openPdfDrawerTooltip')}
+      >
+          {isPdfDrawerOpen ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+      </button>
+
        <div 
-         ref={drawerRef}
-         className={`absolute top-0 right-0 h-screen bg-gray-800 border-l border-gray-700 shadow-2xl z-20 transform transition-transform duration-300 ease-in-out ${activeTrace ? 'translate-x-0' : 'translate-x-full'} flex flex-col`}
-         style={{ width: `${drawerWidth}px`}}
+         ref={pdfDrawerRef}
+         className={`absolute top-0 right-0 h-screen bg-gray-800 border-l border-gray-700 shadow-2xl z-20 transform transition-transform duration-300 ease-in-out flex flex-col`}
+         style={{ width: PDF_DRAWER_WIDTH, transform: isPdfDrawerOpen ? 'translateX(0%)' : 'translateX(100%)' }}
+         onMouseDown={isPdfDrawerOpen ? handlePdfDrawerDragStart : undefined}
        >
-        <div 
-          onMouseDown={handleMouseDown}
-          className="absolute top-0 left-0 h-full w-2 cursor-col-resize z-50"
-          title="Resize Panel"
-        />
-        {activeTrace && (
+        {activeTrace ? (
           <div className="relative h-full w-full overflow-hidden">
               <button
                   onClick={() => setIsTraceInfoPanelOpen(prev => !prev)}
@@ -1621,6 +1648,10 @@ function App() {
                   )}
               </div>
           </div>
+        ) : (
+           <div className="flex items-center justify-center h-full">
+                <p className="text-gray-500 italic px-4 text-center">{t('traceabilityDrawerPlaceholder')}</p>
+            </div>
         )}
     </div>
     </div> 

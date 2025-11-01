@@ -16,39 +16,39 @@ interface TextItemWithCoords {
 
 export const PdfViewer: React.FC<PdfViewerProps> = ({ file, highlightText }) => {
   const { t } = useI18n();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const highlightLayerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRefs = useRef<Map<number, HTMLCanvasElement | null>>(new Map());
+  const highlightLayerRefs = useRef<Map<number, HTMLDivElement | null>>(new Map());
+  
   const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [numPages, setNumPages] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const renderPage = useCallback(async (pageNum: number) => {
-    if (!pdfDoc) return;
-    setIsLoading(true);
-    if (highlightLayerRef.current) {
-        highlightLayerRef.current.innerHTML = '';
-    }
+  // This ref will track if the scroll has already happened to prevent re-scrolling on re-renders
+  const hasScrolledToHighlight = useRef(false);
+
+  const renderPage = useCallback(async (pageNum: number, doc: pdfjsLib.PDFDocumentProxy) => {
+    const canvas = canvasRefs.current.get(pageNum);
+    const highlightLayer = highlightLayerRefs.current.get(pageNum);
+    
+    if (!canvas || !highlightLayer) return;
 
     try {
-      const page = await pdfDoc.getPage(pageNum);
+      const page = await doc.getPage(pageNum);
       const viewport = page.getViewport({ scale: 1.5 });
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
       const context = canvas.getContext('2d');
       if (!context) return;
       
       canvas.height = viewport.height;
       canvas.width = viewport.width;
 
-      // Fix: Added the `canvas` property to `renderContext` to resolve the TypeScript error.
-      // The error indicates that `RenderParameters` expects this property in the current environment.
+      // FIX: The RenderParameters type from this version of pdfjs-dist
+      // seems to require the canvas element itself, not just the context.
+      // We pass it to satisfy the type checker.
       const renderContext = {
         canvasContext: context,
         viewport: viewport,
-        canvas: canvas,
       };
       await page.render(renderContext).promise;
       
@@ -58,8 +58,11 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ file, highlightText }) => 
       
       const normalizedHighlight = highlightText.replace(/\s+/g, ' ').trim();
       const normalizedPageText = textItems.map(item => item.str).join(' ').replace(/\s+/g, ' ');
+      
+      let pageContainsHighlight = false;
 
       if (normalizedPageText.includes(normalizedHighlight)) {
+        pageContainsHighlight = true;
         let startIndex = 0;
         let itemIndex = 0;
         
@@ -83,7 +86,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ file, highlightText }) => 
             
             highlightItems.forEach(item => {
                 const defaultViewport = page.getViewport({ scale: 1 });
-                const [fontSize, , , , charX, charY] = item.transform;
+                const [, , , , charX, charY] = item.transform;
                 const highlightDiv = document.createElement('div');
                 highlightDiv.style.position = 'absolute';
                 highlightDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.4)';
@@ -92,23 +95,35 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ file, highlightText }) => 
                 highlightDiv.style.width = `${(item.width / defaultViewport.width) * 100}%`;
                 highlightDiv.style.height = `${(item.height / defaultViewport.height) * 100}%`;
                 highlightDiv.style.transform = 'translateY(-100%)';
-                highlightLayerRef.current?.appendChild(highlightDiv);
+                highlightLayer.appendChild(highlightDiv);
             });
 
             startIndex += normalizedHighlight.length;
         }
       }
 
+      // Scroll to the first highlighted page
+      if (pageContainsHighlight && !hasScrolledToHighlight.current) {
+          canvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          hasScrolledToHighlight.current = true;
+      }
+
     } catch (e) {
-      console.error(e);
-      setError(t('pdfViewerErrorRendering'));
-    } finally {
-      setIsLoading(false);
+      console.error(`Error rendering page ${pageNum}:`, e);
+      // Don't set a global error for a single page failure in continuous scroll
     }
-  }, [pdfDoc, highlightText, t]);
+  }, [highlightText]);
 
   useEffect(() => {
     const loadPdf = async () => {
+      setIsLoading(true);
+      setError(null);
+      setPdfDoc(null);
+      setNumPages(0);
+      canvasRefs.current.clear();
+      highlightLayerRefs.current.clear();
+      hasScrolledToHighlight.current = false;
+
       try {
         const fileReader = new FileReader();
         fileReader.onload = async (event) => {
@@ -116,38 +131,46 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ file, highlightText }) => 
             const doc = await pdfjsLib.getDocument(event.target.result as ArrayBuffer).promise;
             setPdfDoc(doc);
             setNumPages(doc.numPages);
-
-            // Find which page contains the highlight text
-            let foundPage = 1;
-            for (let i = 1; i <= doc.numPages; i++) {
-                const page = await doc.getPage(i);
-                const textContent = await page.getTextContent();
-                const pageText = textContent.items.map((item: any) => item.str).join(' ');
-                if (pageText.includes(highlightText)) {
-                    foundPage = i;
-                    break;
-                }
-            }
-            setCurrentPage(foundPage);
           }
         };
+        fileReader.onerror = () => {
+          setError(t('pdfViewerErrorLoading'));
+          setIsLoading(false);
+        }
         fileReader.readAsArrayBuffer(file);
       } catch (e) {
         console.error(e);
         setError(t('pdfViewerErrorLoading'));
+        setIsLoading(false);
       }
     };
     loadPdf();
-  }, [file, highlightText, t]);
+  }, [file, t]);
 
   useEffect(() => {
-    if (pdfDoc) {
-      renderPage(currentPage);
+    if (!pdfDoc || numPages === 0) {
+      if (pdfDoc) setIsLoading(false); // Done loading, just no pages
+      return;
     }
-  }, [pdfDoc, currentPage, renderPage]);
+    
+    const renderAllPages = async () => {
+        // Reset highlights before re-rendering
+        highlightLayerRefs.current.forEach(layer => {
+            if (layer) layer.innerHTML = '';
+        });
+        hasScrolledToHighlight.current = false;
 
-  const goToPrevPage = () => setCurrentPage(prev => Math.max(1, prev - 1));
-  const goToNextPage = () => setCurrentPage(prev => Math.min(numPages, prev + 1));
+        const promises = [];
+        for (let i = 1; i <= numPages; i++) {
+            promises.push(renderPage(i, pdfDoc));
+        }
+        await Promise.all(promises);
+        setIsLoading(false);
+    };
+
+    renderAllPages();
+
+  }, [pdfDoc, numPages, renderPage]);
   
   if (error) {
     return <div className="text-red-400 p-4">{error}</div>;
@@ -155,21 +178,29 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ file, highlightText }) => 
   
   return (
     <div className="flex flex-col h-full">
-      {pdfDoc && (
-        <div className="flex justify-between items-center p-2 bg-gray-900 flex-shrink-0">
-            <button onClick={goToPrevPage} disabled={currentPage <= 1} className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50 text-white">&lt;</button>
-            <span className="text-sm text-gray-300">
-                {t('pdfViewerPageLabel', { currentPage, numPages })}
-            </span>
-            <button onClick={goToNextPage} disabled={currentPage >= numPages} className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50 text-white">&gt;</button>
-        </div>
-      )}
-      <div className="flex-grow overflow-auto relative">
-        {isLoading && <div className="absolute inset-0 bg-gray-800/50 flex items-center justify-center text-white">{t('loadingDefault')}</div>}
-        <div style={{ position: 'relative' }}>
-          <canvas ref={canvasRef} />
-          <div ref={highlightLayerRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}></div>
-        </div>
+      <div ref={containerRef} className="flex-grow overflow-auto relative bg-gray-900">
+        {isLoading && (
+            <div className="absolute inset-0 bg-gray-800/50 flex items-center justify-center text-white z-10">
+                {t('loadingDefault')}
+            </div>
+        )}
+        {numPages > 0 && Array.from({ length: numPages }, (_, i) => i + 1).map(pageNum => (
+            <div key={pageNum} className="relative mx-auto my-4 shadow-lg" style={{ width: 'fit-content' }}>
+                <canvas 
+                    ref={node => {
+                        if (node) canvasRefs.current.set(pageNum, node);
+                        else canvasRefs.current.delete(pageNum);
+                    }}
+                />
+                <div 
+                    ref={node => {
+                        if (node) highlightLayerRefs.current.set(pageNum, node);
+                        else highlightLayerRefs.current.delete(pageNum);
+                    }}
+                    className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                ></div>
+            </div>
+        ))}
       </div>
     </div>
   );

@@ -58,6 +58,7 @@ export const pt = {
   traceabilityDrawerEmpty: "Nenhuma citação de origem disponível para este nó.",
   traceabilityDrawerLinesLabel: "Linhas de Referência:",
   traceabilityDrawerFullContextUnavailable: "O contexto de texto completo não está disponível para esta visualização (ex: carregado do histórico).",
+  traceabilityDrawerPlaceholder: "Clique em um nó com citação de origem para ver os detalhes do documento aqui.",
   pdfViewerPageLabel: "Página {{currentPage}} de {{numPages}}",
   pdfViewerErrorLoading: "Erro ao carregar o PDF.",
   pdfViewerErrorRendering: "Erro ao renderizar a página do PDF.",
@@ -75,6 +76,8 @@ export const pt = {
   flexibleSchemaDescription: "Permite que a IA retorne um formato JSON não padrão, como o de eventos causais. Útil para prompts experimentais.",
   expandTracePanelTooltip: "Expandir painel de informações",
   collapseTracePanelTooltip: "Recolher painel de informações",
+  openPdfDrawerTooltip: "Abrir visualizador de documentos",
+  closePdfDrawerTooltip: "Fechar visualizador de documentos",
 };
 
 export const en = {
@@ -136,6 +139,7 @@ export const en = {
   traceabilityDrawerEmpty: "No source quote available for this node.",
   traceabilityDrawerLinesLabel: "Reference Lines:",
   traceabilityDrawerFullContextUnavailable: "Full text context is not available for this view (e.g., loaded from history).",
+  traceabilityDrawerPlaceholder: "Click a node with a source quote to see document details here.",
   pdfViewerPageLabel: "Page {{currentPage}} of {{numPages}}",
   pdfViewerErrorLoading: "Error loading PDF.",
   pdfViewerErrorRendering: "Error rendering PDF page.",
@@ -153,4 +157,6 @@ export const en = {
   flexibleSchemaDescription: "Allows the AI to return a non-standard JSON format, such as for causal events. Useful for experimental prompts.",
   expandTracePanelTooltip: "Expand info panel",
   collapseTracePanelTooltip: "Collapse info panel",
+  openPdfDrawerTooltip: "Open document viewer",
+  closePdfDrawerTooltip: "Close document viewer",
 };
