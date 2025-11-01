@@ -60,6 +60,7 @@ Estamos abertos a contribuições da comunidade! Se você é um engenheiro de IA
 
 Por favor, abra uma _issue_ para discutir mudanças significativas antes de iniciar o trabalho.
 
+---
 
 ### Licença
 
