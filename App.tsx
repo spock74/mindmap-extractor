@@ -2,6 +2,8 @@
 
 
 
+
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -339,7 +341,7 @@ const USFlagIcon: React.FC = () => (
 );
 
 const ChevronDownIcon = ({ isOpen }: { isOpen: boolean }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
       className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
       aria-hidden="true"
     >
@@ -348,12 +350,12 @@ const ChevronDownIcon = ({ isOpen }: { isOpen: boolean }) => (
 );
 
 const ChevronLeftIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <polyline points="15 18 9 12 15 6"></polyline>
     </svg>
 );
 const ChevronRightIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <polyline points="9 18 15 12 9 6"></polyline>
     </svg>
 );
@@ -974,6 +976,7 @@ function App() {
     setSelectedFile(file);
     if (file && file.type === 'application/pdf') {
         setPdfFile(file);
+        setIsPdfDrawerOpen(true);
     } else {
         setPdfFile(null);
     }
@@ -1259,6 +1262,12 @@ function App() {
       {graphElements && graphElements.edges.length > 0 && <EdgeLegend />}
     </ReactFlow>
   ), [nodes, edges, onNodesChange, onEdgesChange, handleSelectionChange, onNodeClick, onPaneClick, graphElements]);
+
+  const showPdfViewer = !!pdfFile;
+  const showTracePanel = !!activeTrace;
+  const showPreprocessedText = showTracePanel && !showPdfViewer && !!preprocessedText;
+  const showContextUnavailable = showTracePanel && !showPdfViewer && !preprocessedText;
+  const showDrawerContent = showPdfViewer || showTracePanel;
 
   return (
     <div className="h-screen font-sans text-white bg-gray-900 relative overflow-hidden">
@@ -1598,54 +1607,58 @@ function App() {
          style={{ width: PDF_DRAWER_WIDTH, transform: isPdfDrawerOpen ? 'translateX(0%)' : 'translateX(100%)' }}
          onMouseDown={isPdfDrawerOpen ? handlePdfDrawerDragStart : undefined}
        >
-        {activeTrace ? (
+        {showDrawerContent ? (
           <div className="relative h-full w-full overflow-hidden">
-              <button
-                  onClick={() => setIsTraceInfoPanelOpen(prev => !prev)}
-                  title={t(isTraceInfoPanelOpen ? 'collapseTracePanelTooltip' : 'expandTracePanelTooltip')}
-                  aria-label={t(isTraceInfoPanelOpen ? 'collapseTracePanelTooltip' : 'expandTracePanelTooltip')}
-                  className="absolute top-0 left-1/2 w-10 h-10 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center z-40 transition-all duration-300 transform hover:scale-110"
-                  style={{ transform: `translateX(-50%) translateY(-33%)` }}
-              >
-                  <ChevronDownIcon isOpen={isTraceInfoPanelOpen} />
-              </button>
+              {showTracePanel && (
+                <>
+                  <button
+                      onClick={() => setIsTraceInfoPanelOpen(prev => !prev)}
+                      title={t(isTraceInfoPanelOpen ? 'collapseTracePanelTooltip' : 'expandTracePanelTooltip')}
+                      aria-label={t(isTraceInfoPanelOpen ? 'collapseTracePanelTooltip' : 'expandTracePanelTooltip')}
+                      className="absolute top-0 left-1/2 w-10 h-10 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center z-40 transition-all duration-300 transform hover:scale-110"
+                      style={{ transform: `translateX(-50%) translateY(-33%)` }}
+                  >
+                      <ChevronDownIcon isOpen={isTraceInfoPanelOpen} />
+                  </button>
 
-              <div className={`absolute top-0 left-0 right-0 p-4 bg-gray-800 border-b border-gray-700 shadow-lg z-30 transform transition-transform duration-500 ease-in-out ${isTraceInfoPanelOpen ? 'translate-y-0' : '-translate-y-full'}`}>
-                  <div className="flex justify-between items-center mb-4 flex-shrink-0">
-                      <h2 className="text-lg font-bold text-cyan-400">{t('traceabilityDrawerTitle')}</h2>
-                      <button onClick={() => { setActiveTrace(null); setIsTraceInfoPanelOpen(false); }} className="text-gray-400 hover:text-white" aria-label="Close">
-                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                      </button>
-                  </div>
-                  <div className="flex-shrink-0">
-                      <div className="text-sm font-semibold text-gray-300 mb-2 truncate" title={activeTrace.label}>
-                          {activeTrace.label}
+                  <div className={`absolute top-0 left-0 right-0 p-4 bg-gray-800 border-b border-gray-700 shadow-lg z-30 transform transition-transform duration-500 ease-in-out ${isTraceInfoPanelOpen ? 'translate-y-0' : '-translate-y-full'}`}>
+                      <div className="flex justify-between items-center mb-4 flex-shrink-0">
+                          <h2 className="text-lg font-bold text-cyan-400">{t('traceabilityDrawerTitle')}</h2>
+                          <button onClick={() => { setActiveTrace(null); setIsTraceInfoPanelOpen(false); }} className="text-gray-400 hover:text-white" aria-label="Close">
+                               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                          </button>
                       </div>
-                      {activeTrace.source_lines && (
-                          <div className="text-xs text-gray-400 mb-2 font-mono">
-                              <span className="font-semibold">{t('traceabilityDrawerLinesLabel')}</span> {activeTrace.source_lines}
+                      <div className="flex-shrink-0">
+                          <div className="text-sm font-semibold text-gray-300 mb-2 truncate" title={activeTrace!.label}>
+                              {activeTrace!.label}
                           </div>
-                      )}
-                      <div className="bg-gray-900 p-3 rounded-md text-gray-300 text-sm italic border border-gray-700 max-h-40 overflow-y-auto">
-                          "{activeTrace.source_quote || t('traceabilityDrawerEmpty')}"
+                          {activeTrace!.source_lines && (
+                              <div className="text-xs text-gray-400 mb-2 font-mono">
+                                  <span className="font-semibold">{t('traceabilityDrawerLinesLabel')}</span> {activeTrace!.source_lines}
+                              </div>
+                          )}
+                          <div className="bg-gray-900 p-3 rounded-md text-gray-300 text-sm italic border border-gray-700 max-h-40 overflow-y-auto">
+                              "{activeTrace!.source_quote || t('traceabilityDrawerEmpty')}"
+                          </div>
                       </div>
                   </div>
-              </div>
+                </>
+              )}
 
               <div className="h-full pt-4">
-                  {pdfFile && activeTrace.source_quote ? (
-                    <PdfViewer file={pdfFile} highlightText={activeTrace.source_quote} />
-                  ) : preprocessedText ? (
+                  {showPdfViewer ? (
+                    <PdfViewer file={pdfFile} highlightText={activeTrace?.source_quote || ''} />
+                  ) : showPreprocessedText ? (
                       <div className="overflow-y-auto h-full bg-gray-900 p-2 rounded-md">
                           <pre className="text-gray-300 text-xs leading-relaxed whitespace-pre-wrap font-mono">
-                              {renderHighlightedText(preprocessedText, activeTrace.source_lines || null)}
+                              {renderHighlightedText(preprocessedText!, activeTrace!.source_lines || null)}
                           </pre>
                       </div>
-                  ) : (
+                  ) : showContextUnavailable ? (
                       <div className="overflow-y-auto h-full bg-gray-900 p-3 rounded-md flex items-center justify-center">
                          <p className="text-gray-500 text-sm italic text-center">{t('traceabilityDrawerFullContextUnavailable')}</p>
                       </div>
-                  )}
+                  ) : null}
               </div>
           </div>
         ) : (
