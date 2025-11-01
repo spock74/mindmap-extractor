@@ -48,6 +48,7 @@ export const pt = {
   errorJsonValidation: "Falha na validação do JSON:\n{{errors}}",
   errorInvalidJson: "JSON inválido: {{error}}",
   languageLabel: "Idioma",
+  changeLanguageTooltip: "Mudar para Inglês",
   layoutTB: "Cima para Baixo",
   layoutBT: "Baixo para Cima",
   layoutLR: "Esquerda para Direita",
@@ -72,6 +73,8 @@ export const pt = {
   neutral: "Neutra",
   flexibleSchemaLabel: "Permitir Esquema Flexível de Saída",
   flexibleSchemaDescription: "Permite que a IA retorne um formato JSON não padrão, como o de eventos causais. Útil para prompts experimentais.",
+  expandTracePanelTooltip: "Expandir painel de informações",
+  collapseTracePanelTooltip: "Recolher painel de informações",
 };
 
 export const en = {
@@ -123,6 +126,7 @@ export const en = {
   errorJsonValidation: "JSON validation failed:\n{{errors}}",
   errorInvalidJson: "Invalid JSON: {{error}}",
   languageLabel: "Language",
+  changeLanguageTooltip: "Switch to Portuguese",
   layoutTB: "Top to Bottom",
   layoutBT: "Bottom to Top",
   layoutLR: "Left to Right",
@@ -147,4 +151,6 @@ export const en = {
   neutral: "Neutral",
   flexibleSchemaLabel: "Allow Flexible Output Schema",
   flexibleSchemaDescription: "Allows the AI to return a non-standard JSON format, such as for causal events. Useful for experimental prompts.",
+  expandTracePanelTooltip: "Expand info panel",
+  collapseTracePanelTooltip: "Collapse info panel",
 };
