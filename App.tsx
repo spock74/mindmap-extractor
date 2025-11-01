@@ -1,9 +1,5 @@
 
 
-
-
-
-
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -30,8 +26,6 @@ import { useI18n } from './i18n';
 import { breakCycles } from './utils/graph';
 import { preprocessText, parseLineNumbers } from './utils/text';
 import { extractJsonFromString } from './utils/json';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdfjs-dist/build/pdf.worker.min.mjs';
 
 const readFileContent = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -957,6 +951,15 @@ function App() {
       return null;
     }
   }, [t, processCajalData]);
+
+  const handleGenerateGraphFromJson = useCallback(() => {
+    if (isLoading || !jsonInput.trim()) return;
+    const finalJsonString = processJsonAndSetGraph(jsonInput);
+    if (finalJsonString) {
+        setJsonInput(finalJsonString);
+        setAiJsonOutput(finalJsonString);
+    }
+  }, [isLoading, jsonInput, processJsonAndSetGraph]);
   
   const canCollapseSelected = useMemo(() => {
     if (!graphElements || selectedNodeIdsForActions.length === 0) return false;
@@ -1005,15 +1008,15 @@ function App() {
         .replace('{MAX_CONCEITOS}', String(maxConcepts))
         .replace('{{article_text}}', processedContent);
         
-      const jsonString = await generateJsonFromText(finalPrompt, model, useFlexibleSchema);
-      setAiJsonOutput(jsonString);
-
+      const rawAiResponse = await generateJsonFromText(finalPrompt, model, useFlexibleSchema);
+      
       if (generationCancelledRef.current) return;
       
       setLoadingMessage("loadingMessageProcessing");
-      const finalJsonString = processJsonAndSetGraph(jsonString, { preservePreprocessedText: true });
+      const finalJsonString = processJsonAndSetGraph(rawAiResponse, { preservePreprocessedText: true });
 
       if (finalJsonString) {
+        setAiJsonOutput(finalJsonString);
         const newHistoryItem: HistoryItem = {
           id: `hist-${Date.now()}`,
           filename: selectedFile.name,
@@ -1023,6 +1026,9 @@ function App() {
         };
         setHistory(prev => [newHistoryItem, ...prev]);
         setJsonInput(finalJsonString);
+      } else {
+        // If processing failed, show the raw response for debugging.
+        setAiJsonOutput(rawAiResponse);
       }
     } catch (e) {
       if (generationCancelledRef.current) {
@@ -1409,7 +1415,7 @@ function App() {
                           <label htmlFor="prompt-input" className="text-sm font-medium text-gray-300 mb-2">
                               {t('promptLabel')}
                           </label>
-                          <textarea id="prompt-input" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full flex-grow p-3 border border-gray-600 rounded-md text-gray-800 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder={t('promptPlaceholder')} style={{ backgroundColor: '#ffefde' }} />
+                          <textarea id="prompt-input" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder={t('promptPlaceholder')} />
                       </div>
                       
                       <div>
@@ -1445,13 +1451,7 @@ function App() {
                           </label>
                           <textarea id="json-input" value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder="Enter JSON data..." />
                       </div>
-                      <button onClick={() => {
-                        const finalJsonString = processJsonAndSetGraph(jsonInput);
-                        if (finalJsonString) {
-                            setJsonInput(finalJsonString);
-                            setAiJsonOutput(finalJsonString);
-                        }
-                      }} disabled={isLoading} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                      <button onClick={handleGenerateGraphFromJson} disabled={isLoading || !jsonInput.trim()} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
                           {t('generateGraphButton')}
                       </button>
                   </div>
@@ -1503,6 +1503,14 @@ function App() {
                           </button>
                       ))}
                   </div>
+                  <button
+                      onClick={handleGenerateGraphFromJson}
+                      disabled={isLoading || !jsonInput.trim()}
+                      className="mt-4 w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
+                      title={!jsonInput.trim() ? 'No JSON data to process' : 'Regenerate graph from JSON input'}
+                  >
+                      {t('regenerateGraphButton')}
+                  </button>
               </div>
               
               <div className="mt-6 pt-4 border-t border-gray-700">
