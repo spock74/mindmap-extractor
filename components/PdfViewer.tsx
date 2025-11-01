@@ -43,63 +43,62 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ file, highlightText }) => 
       canvas.height = viewport.height;
       canvas.width = viewport.width;
 
-      // FIX: The RenderParameters type from this version of pdfjs-dist
-      // seems to require the canvas element itself, not just the context.
-      // We pass it to satisfy the type checker.
+      // Fix: Add the `canvas` property to `renderContext` to satisfy the `RenderParameters` type.
+      // This version of pdfjs-dist requires the canvas element itself to be passed.
       const renderContext = {
+        canvas,
         canvasContext: context,
         viewport: viewport,
       };
       await page.render(renderContext).promise;
       
-      // After rendering, apply highlights
       const textContent = await page.getTextContent();
       const textItems = textContent.items as TextItemWithCoords[];
       
-      const normalizedHighlight = highlightText.replace(/\s+/g, ' ').trim();
-      const normalizedPageText = textItems.map(item => item.str).join(' ').replace(/\s+/g, ' ');
-      
+      const cleanQuery = highlightText.replace(/\s+/g, '').toLowerCase();
+      if (!cleanQuery) return;
+
       let pageContainsHighlight = false;
+      const highlightedItemIndices = new Set<number>();
 
-      if (normalizedPageText.includes(normalizedHighlight)) {
-        pageContainsHighlight = true;
-        let startIndex = 0;
-        let itemIndex = 0;
-        
-        while((startIndex = normalizedPageText.indexOf(normalizedHighlight, startIndex)) !== -1) {
-            const endIndex = startIndex + normalizedHighlight.length;
-            let currentLen = 0;
-            const highlightItems: TextItemWithCoords[] = [];
+      for (let i = 0; i < textItems.length; i++) {
+        if (!textItems[i].str.trim()) continue;
 
-            for(let i = itemIndex; i < textItems.length; i++){
-                const itemText = textItems[i].str.replace(/\s+/g, ' ');
-                const nextLen = currentLen + itemText.length;
-                if(nextLen > startIndex){
-                    highlightItems.push(textItems[i]);
-                }
-                currentLen = nextLen;
-                if(currentLen >= endIndex){
-                    itemIndex = i;
-                    break;
-                }
-            }
+        let candidateText = '';
+        for (let j = i; j < textItems.length; j++) {
+            candidateText += textItems[j].str;
+            const cleanCandidate = candidateText.replace(/\s+/g, '').toLowerCase();
             
-            highlightItems.forEach(item => {
-                const defaultViewport = page.getViewport({ scale: 1 });
-                const [, , , , charX, charY] = item.transform;
-                const highlightDiv = document.createElement('div');
-                highlightDiv.style.position = 'absolute';
-                highlightDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.4)';
-                highlightDiv.style.left = `${(charX / defaultViewport.width) * 100}%`;
-                highlightDiv.style.top = `${((defaultViewport.height - charY) / defaultViewport.height) * 100}%`;
-                highlightDiv.style.width = `${(item.width / defaultViewport.width) * 100}%`;
-                highlightDiv.style.height = `${(item.height / defaultViewport.height) * 100}%`;
-                highlightDiv.style.transform = 'translateY(-100%)';
-                highlightLayer.appendChild(highlightDiv);
-            });
+            if (cleanCandidate === cleanQuery) {
+                for (let k = i; k <= j; k++) {
+                    highlightedItemIndices.add(k);
+                }
+                pageContainsHighlight = true;
+                break; 
+            }
 
-            startIndex += normalizedHighlight.length;
+            if (!cleanQuery.startsWith(cleanCandidate)) {
+                break;
+            }
         }
+      }
+
+      if (pageContainsHighlight) {
+          highlightedItemIndices.forEach(index => {
+              const item = textItems[index];
+              if (!item) return;
+              const defaultViewport = page.getViewport({ scale: 1 });
+              const [, , , , charX, charY] = item.transform;
+              const highlightDiv = document.createElement('div');
+              highlightDiv.style.position = 'absolute';
+              highlightDiv.style.backgroundColor = 'rgba(255, 255, 0, 0.4)';
+              highlightDiv.style.left = `${(charX / defaultViewport.width) * 100}%`;
+              highlightDiv.style.top = `${((defaultViewport.height - charY) / defaultViewport.height) * 100}%`;
+              highlightDiv.style.width = `${(item.width / defaultViewport.width) * 100}%`;
+              highlightDiv.style.height = `${(item.height / defaultViewport.height) * 100}%`;
+              highlightDiv.style.transform = 'translateY(-100%)';
+              highlightLayer.appendChild(highlightDiv);
+          });
       }
 
       // Scroll to the first highlighted page

@@ -1,6 +1,6 @@
 
 export const pt = {
-  appTitle: "Graphfy",
+  appTitle: "Xphy",
   appDescription: "Visualize grafos de conhecimento de documentos JSON ou texto usando Gemini.",
   graphTab: "Grafo",
   causalTab: "Causal",
@@ -81,7 +81,7 @@ export const pt = {
 };
 
 export const en = {
-  appTitle: "Graphfy",
+  appTitle: "Xphy",
   appDescription: "Visualize knowledge graphs from JSON or text documents using Gemini.",
   graphTab: "Graph",
   causalTab: "Causal",
