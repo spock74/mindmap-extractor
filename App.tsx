@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   useNodesState,
@@ -16,8 +17,8 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { ZodError } from 'zod';
 
 import { getLayoutedElements } from './utils/layout';
-import { TripletJsonDataSchema, KnowledgeBaseJsonDataSchema, GraphJsonDataSchema } from './utils/schema';
-import { TripletJsonData, KnowledgeBaseJsonData, Triplet, HistoryItem, KnowledgeBaseConcept, GraphJsonData, GraphNode, GraphEdge } from './types';
+import { TripletJsonDataSchema, KnowledgeBaseJsonDataSchema, GraphJsonDataSchema, CajalDataSchema } from './utils/schema';
+import { TripletJsonData, KnowledgeBaseJsonData, Triplet, HistoryItem, KnowledgeBaseConcept, GraphJsonData, GraphNode, GraphEdge, CajalEvent } from './types';
 import { DEFAULT_JSON_DATA, GEMINI_MODELS, NODE_TYPE_COLORS, LAYOUTS, PROMPT_TEMPLATES, NODE_WIDTH } from './constants';
 import { CustomNode } from './components/CustomNode';
 import { PdfViewer } from './components/PdfViewer';
@@ -173,6 +174,147 @@ const EdgeLegend: React.FC = () => {
     );
 };
 
+const ScaffoldedControlPanel: React.FC<{ tabName: string }> = ({ tabName }) => {
+  const { t } = useI18n();
+  const [activeTab, setActiveTab] = useState<'generate' | 'manual' | 'history'>('generate');
+  const availablePrompts = useMemo(() => PROMPT_TEMPLATES, []);
+  
+  const handleScaffoldAction = (action: string) => {
+    console.log(`Action triggered in '${tabName}' tab: ${action}`);
+  };
+
+  return (
+    <>
+      <div className="flex border-b border-gray-700 mb-4 sticky top-0 bg-gray-900">
+          { (['generate', 'manual', 'history'] as const).map(tab => (
+              <button key={tab} onClick={() => setActiveTab(tab)} className={`capitalize text-sm font-medium py-2 px-4 border-b-2 transition-colors duration-200 ${activeTab === tab ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-gray-400 hover:text-white'}`}>
+                  {t(`${tab}Tab`)}
+              </button>
+          ))}
+      </div>
+
+      <div className="flex-grow flex flex-col min-h-0">
+        {activeTab === 'generate' && (
+           <div className="flex flex-col gap-4 flex-grow">
+              <div>
+                <label htmlFor="model-select-scaffold" className="text-sm font-medium text-gray-300 mb-2 block">
+                  {t('modelLabel')}
+                </label>
+                <select id="model-select-scaffold" value={GEMINI_MODELS[1]} disabled className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200 disabled:opacity-50">
+                  {GEMINI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm text-gray-300 cursor-not-allowed opacity-50" title={t('flexibleSchemaDescription')}>
+                  <input type="checkbox" disabled className="form-checkbox h-4 w-4 bg-gray-700 border-gray-600 rounded text-cyan-500 focus:ring-cyan-600 transition-colors" />
+                  {t('flexibleSchemaLabel')}
+                </label>
+              </div>
+
+              <div>
+                <label htmlFor="max-concepts-input-scaffold" className="text-sm font-medium text-gray-300 mb-2 block">
+                  {t('maxConceptsLabel')}
+                </label>
+                <input id="max-concepts-input-scaffold" type="number" value={10} disabled className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200 disabled:opacity-50" />
+              </div>
+            
+              <div>
+                  <label htmlFor="file-upload-scaffold" className="text-sm font-medium text-gray-300 mb-2 block">
+                      {t('uploadLabel')}
+                  </label>
+                  <button disabled className="w-full text-sm p-3 bg-gray-800 border border-dashed border-gray-600 rounded-md text-gray-400 disabled:opacity-50 cursor-not-allowed">
+                      {t('selectFileButton')}
+                  </button>
+              </div>
+
+              <div>
+                  <label htmlFor="prompt-select-scaffold" className="text-sm font-medium text-gray-300 mb-2 block">
+                      {t('selectPromptLabel')}
+                  </label>
+                  <select id="prompt-select-scaffold" defaultValue="" disabled className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200 disabled:opacity-50">
+                      <option value="">{t('selectPromptPlaceholder')}</option>
+                      {availablePrompts.map(p => (
+                          <option key={p.id} value={p.id}>{p.title}</option>
+                      ))}
+                  </select>
+              </div>
+
+              <div className="flex flex-col flex-grow">
+                  <label htmlFor="prompt-input-scaffold" className="text-sm font-medium text-gray-300 mb-2">
+                      {t('promptLabel')}
+                  </label>
+                  <textarea id="prompt-input-scaffold" disabled className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200 disabled:opacity-50" placeholder={t('promptPlaceholder')} />
+              </div>
+              
+              <button onClick={() => handleScaffoldAction('Generate with AI')} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                  {t('generateWithAIButton')}
+              </button>
+          </div>
+        )}
+
+        {activeTab === 'manual' && (
+          <div className="flex flex-col gap-4 flex-grow">
+              <div className="flex-grow flex flex-col">
+                  <label htmlFor="json-input-scaffold" className="text-sm font-medium text-gray-300 mb-2">
+                      {t('pasteJsonLabel')}
+                  </label>
+                  <textarea id="json-input-scaffold" disabled className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200 disabled:opacity-50" placeholder="Enter JSON data..." />
+              </div>
+              <button onClick={() => handleScaffoldAction('Generate Graph')} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                  {t('generateGraphButton')}
+              </button>
+          </div>
+        )}
+          
+        {activeTab === 'history' && (
+           <div className="flex flex-col gap-2 flex-grow">
+              <p className="text-gray-500 text-sm text-center mt-4">{t('historyEmpty')}</p>
+          </div>
+        )}
+      </div>
+      
+      <div className="mt-6 pt-4 border-t border-gray-700">
+          <h2 className="text-sm font-medium text-gray-300 mb-3">{t('layoutDirectionTitle')}</h2>
+          <div className="grid grid-cols-2 gap-2">
+              {(Object.keys(LAYOUTS) as Array<keyof typeof LAYOUTS>).map((dir) => (
+                  <button
+                      key={dir}
+                      onClick={() => handleScaffoldAction(`Set layout to ${dir}`)}
+                      className={`py-2 px-3 text-xs font-semibold rounded-md transition-colors duration-200 bg-gray-700 hover:bg-gray-600 text-gray-300`}
+                  >
+                      {t(LAYOUTS[dir])}
+                  </button>
+              ))}
+          </div>
+      </div>
+      
+      <div className="mt-6 pt-4 border-t border-gray-700">
+          <h2 className="text-sm font-medium text-gray-300 mb-3">{t('filtersTitle')}</h2>
+          <div className="flex flex-col gap-4">
+              <input type="text" placeholder={t('filterByLabelPlaceholder')} disabled className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm disabled:opacity-50" />
+              <input type="text" placeholder={t('filterByEdgeLabelPlaceholder')} disabled className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm disabled:opacity-50" />
+              <div className="grid grid-cols-2 gap-2 text-sm opacity-50">
+                  <label className="flex items-center gap-2 text-gray-300 cursor-not-allowed">
+                      <input type="checkbox" disabled className="form-checkbox h-4 w-4 bg-gray-700 border-gray-600 rounded text-cyan-500" />
+                      <span className="capitalize">riskFactor</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-gray-300 cursor-not-allowed">
+                      <input type="checkbox" disabled className="form-checkbox h-4 w-4 bg-gray-700 border-gray-600 rounded text-cyan-500" />
+                      <span className="capitalize">treatment</span>
+                  </label>
+              </div>
+              <button
+                  onClick={() => handleScaffoldAction('Clear Filters')}
+                  className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
+              >
+                  {t('clearFiltersButton')}
+              </button>
+          </div>
+      </div>
+    </>
+  );
+};
 
 function App() {
   const { t, language, setLanguage } = useI18n();
@@ -181,9 +323,11 @@ function App() {
   const [layout, setLayout] = useState<string>('LR_CURVED');
 
   const [jsonInput, setJsonInput] = useState<string>(DEFAULT_JSON_DATA);
+  const [aiJsonOutput, setAiJsonOutput] = useState<string>('');
   const [graphElements, setGraphElements] = useState<{ nodes: Node<GraphNode>[], edges: Edge[] } | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [activeTab, setActiveTab] = useState<'generate' | 'manual' | 'history'>('generate');
+  const [mainTab, setMainTab] = useState<'graph' | 'causal' | 'testes'>('graph');
 
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -259,9 +403,10 @@ function App() {
   const [maxConcepts, setMaxConcepts] = useState<number>(10);
   const generationCancelledRef = useRef<boolean>(false);
   const availablePrompts = useMemo(() => PROMPT_TEMPLATES, []);
+  const [useFlexibleSchema, setUseFlexibleSchema] = useState<boolean>(false);
   
 
-  const generateJsonFromText = useCallback(async (finalPrompt: string, selectedModel: string): Promise<string> => {
+  const generateJsonFromText = useCallback(async (finalPrompt: string, selectedModel: string, isFlexible: boolean): Promise<string> => {
     if (!process.env.API_KEY) {
         throw new Error("API key is missing. Please ensure it is set in your environment variables.");
     }
@@ -269,12 +414,12 @@ function App() {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+    const config = isFlexible ? {} : { responseMimeType: "application/json" as const };
+
     const response = await ai.models.generateContent({
         model: selectedModel,
         contents: finalPrompt,
-        config: {
-            responseMimeType: "application/json",
-        },
+        config: config,
     });
 
     if (response.candidates?.[0]?.finishReason && response.candidates[0].finishReason !== 'STOP') {
@@ -591,6 +736,82 @@ function App() {
     return { nodes: initialNodes, edges };
   };
     
+  const processCajalData = useCallback((data: CajalEvent[]): { nodes: Node<GraphNode>[], edges: Edge[] } => {
+    const nodeMap = new Map<string, Node<GraphNode>>();
+    const initialEdges: Edge[] = [];
+
+    data.forEach((event, index) => {
+        const agent = event.hasAgent;
+        const affected = event.hasAffectedEntity;
+
+        if (agent.label && !nodeMap.has(agent.label)) {
+            nodeMap.set(agent.label, {
+                id: agent.label,
+                type: 'custom',
+                data: {
+                    id: agent.label,
+                    label: agent.label,
+                    type: 'agent',
+                    source_quote: event.supportingQuote,
+                    source_lines: 'N/A', // Not available in this format
+                },
+                position: { x: 0, y: 0 },
+            });
+        }
+        if (affected.label && !nodeMap.has(affected.label)) {
+            nodeMap.set(affected.label, {
+                id: affected.label,
+                type: 'custom',
+                data: {
+                    id: affected.label,
+                    label: affected.label,
+                    type: 'affectedEntity',
+                    source_quote: event.supportingQuote,
+                    source_lines: 'N/A',
+                },
+                position: { x: 0, y: 0 },
+            });
+        }
+
+        if (agent.label && affected.label) {
+            let strength: 'forte' | 'moderada' | 'fraca' = 'moderada';
+            if (event.relationQualifier === 'explicitly causal' || event.relationQualifier === 'strongly implied causal') strength = 'forte';
+            else if (event.relationQualifier === 'weakly implied causal') strength = 'fraca';
+
+            let nature: 'positiva' | 'negativa' | 'neutra' = 'neutra';
+            const rel = event.hasCausalRelationship.toLowerCase();
+            if (rel.includes('increase') || rel.includes('promote') || rel.includes('cause')) nature = 'positiva';
+            else if (rel.includes('decrease') || rel.includes('inhibit') || rel.includes('prevent')) nature = 'negativa';
+
+            const edgeStyle = getEdgeStyle({ strength, nature });
+
+            initialEdges.push({
+                id: `e-${index}-${agent.label}-${affected.label}`,
+                source: agent.label,
+                target: affected.label,
+                label: event.hasCausalRelationship.replace('cajal:', ''),
+                type: 'smoothstep',
+                markerEnd: { type: MarkerType.ArrowClosed, color: edgeStyle.stroke as string },
+                style: edgeStyle,
+                labelStyle: { fill: '#E2E8F0', fontSize: 12 },
+                labelBgStyle: { fill: '#2D3748' },
+            });
+        }
+    });
+    
+    const sourceIds = new Set(initialEdges.map(e => e.source));
+    const nodes = Array.from(nodeMap.values()).map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        hasChildren: sourceIds.has(node.id),
+      },
+    }));
+
+    const edges = breakCycles(nodes, initialEdges);
+    return { nodes, edges };
+  }, []);
+
   const processJsonAndSetGraph = useCallback((jsonString: string, options: { preservePreprocessedText?: boolean } = {}): string | null => {
     setError(null);
     setGraphElements(null);
@@ -607,49 +828,56 @@ function App() {
       
       let parsedJson = JSON.parse(cleanJsonString);
       let finalJsonToStore = cleanJsonString;
-
-      if (Array.isArray(parsedJson)) {
-        parsedJson = { triplets: parsedJson };
-        finalJsonToStore = JSON.stringify(parsedJson, null, 2);
-      } else if (typeof parsedJson === 'object' && parsedJson !== null && !('result' in parsedJson) && !('kb' in parsedJson) && !('triplets' in parsedJson)) {
-        const keys = Object.keys(parsedJson);
-        if (keys.length === 1 && Array.isArray(parsedJson[keys[0]])) {
-            parsedJson = { triplets: parsedJson[keys[0]] };
-            finalJsonToStore = JSON.stringify(parsedJson, null, 2);
-        } else if ('nodes' in parsedJson && 'edges' in parsedJson) {
-            const adaptedGraphData = {
-                result: {
-                    title: parsedJson.title || 'Generated Graph',
-                    nodes: parsedJson.nodes,
-                    edges: parsedJson.edges,
-                }
-            };
-            parsedJson = adaptedGraphData;
-            finalJsonToStore = JSON.stringify(parsedJson, null, 2);
-        }
-      }
+      let processed = false;
       
-      if ('result' in parsedJson) {
-        const nodeIds = new Set(parsedJson.result.nodes.map((n: {id: string}) => n.id));
-        parsedJson.result.edges = parsedJson.result.edges.filter((e: {source: string, target: string}) =>
-            e.source && e.target && nodeIds.has(e.source) && nodeIds.has(e.target)
-        );
-        const graphData: GraphJsonData = GraphJsonDataSchema.parse(parsedJson);
-        const { nodes, edges } = processGraphData(graphData);
-        setGraphElements({ nodes, edges });
-      } else if ('kb' in parsedJson) {
-        const kbData: KnowledgeBaseJsonData = KnowledgeBaseJsonDataSchema.parse(parsedJson);
-        const tripletData = transformKbToTriplets(kbData);
-        const { nodes, edges } = processTriplets(tripletData);
-        setGraphElements({ nodes, edges });
-        finalJsonToStore = JSON.stringify(tripletData, null, 2);
-      } else if ('triplets' in parsedJson) {
-        const tripletData = TripletJsonDataSchema.parse(parsedJson);
-        const { nodes, edges } = processTriplets(tripletData);
-        setGraphElements({ nodes, edges });
-        finalJsonToStore = JSON.stringify(tripletData, null, 2);
-      } else {
-        throw new Error("Invalid JSON structure. The root key must be 'result', 'triplets', or 'kb'.");
+      // Try parsing as CajalData first if it's an array
+      if (Array.isArray(parsedJson)) {
+          try {
+              const cajalData = CajalDataSchema.parse(parsedJson);
+              const { nodes, edges } = processCajalData(cajalData);
+              setGraphElements({ nodes, edges });
+              finalJsonToStore = JSON.stringify(cajalData, null, 2);
+              processed = true;
+          } catch (zodError) {
+              // Not a valid Cajal array, assume it's the old triplet array format.
+              parsedJson = { triplets: parsedJson };
+              finalJsonToStore = JSON.stringify(parsedJson, null, 2);
+          }
+      } else if (parsedJson.causalEvents && Array.isArray(parsedJson.causalEvents)) {
+          try {
+              const cajalData = CajalDataSchema.parse(parsedJson.causalEvents);
+              const { nodes, edges } = processCajalData(cajalData);
+              setGraphElements({ nodes, edges });
+              finalJsonToStore = JSON.stringify(cajalData, null, 2);
+              processed = true;
+          } catch (zodError) {
+             // It has the key but doesn't match the schema, fall through.
+          }
+      }
+
+      if (!processed) {
+        if ('result' in parsedJson) {
+          const nodeIds = new Set(parsedJson.result.nodes.map((n: {id: string}) => n.id));
+          parsedJson.result.edges = parsedJson.result.edges.filter((e: {source: string, target: string}) =>
+              e.source && e.target && nodeIds.has(e.source) && nodeIds.has(e.target)
+          );
+          const graphData: GraphJsonData = GraphJsonDataSchema.parse(parsedJson);
+          const { nodes, edges } = processGraphData(graphData);
+          setGraphElements({ nodes, edges });
+        } else if ('kb' in parsedJson) {
+          const kbData: KnowledgeBaseJsonData = KnowledgeBaseJsonDataSchema.parse(parsedJson);
+          const tripletData = transformKbToTriplets(kbData);
+          const { nodes, edges } = processTriplets(tripletData);
+          setGraphElements({ nodes, edges });
+          finalJsonToStore = JSON.stringify(tripletData, null, 2);
+        } else if ('triplets' in parsedJson) {
+          const tripletData = TripletJsonDataSchema.parse(parsedJson);
+          const { nodes, edges } = processTriplets(tripletData);
+          setGraphElements({ nodes, edges });
+          finalJsonToStore = JSON.stringify(tripletData, null, 2);
+        } else {
+          throw new Error("Invalid JSON structure. The root key must be 'result', 'triplets', or 'kb', or an array of Causal Events.");
+        }
       }
       
       setLabelFilter('');
@@ -675,7 +903,7 @@ function App() {
       setLoadingMessage('');
       return null;
     }
-  }, [t]);
+  }, [t, processCajalData]);
   
   const canCollapseSelected = useMemo(() => {
     if (!graphElements || selectedNodeIdsForActions.length === 0) return false;
@@ -705,6 +933,7 @@ function App() {
     
     setIsLoading(true);
     setError(null);
+    setAiJsonOutput('');
     generationCancelledRef.current = false;
 
     try {
@@ -719,10 +948,12 @@ function App() {
       const finalPrompt = prompt
         .replace('{TEXTO_DE_ENTRADA}', processedContent)
         .replace('{TEXTOS_INTEGRAIS_DOS_ARTIGOS}', processedContent)
-        .replace('{MAX_CONCEITOS}', String(maxConcepts));
+        .replace('{MAX_CONCEITOS}', String(maxConcepts))
+        .replace('{{article_text}}', processedContent);
         
-      const jsonString = await generateJsonFromText(finalPrompt, model);
-      
+      const jsonString = await generateJsonFromText(finalPrompt, model, useFlexibleSchema);
+      setAiJsonOutput(jsonString);
+
       if (generationCancelledRef.current) return;
       
       setLoadingMessage("loadingMessageProcessing");
@@ -761,6 +992,7 @@ function App() {
 
   const handleSelectHistoryItem = useCallback((item: HistoryItem) => {
     setJsonInput(item.jsonString);
+    setAiJsonOutput(item.jsonString);
     processJsonAndSetGraph(item.jsonString);
     setActiveTab('manual');
   }, [processJsonAndSetGraph]);
@@ -1007,237 +1239,281 @@ function App() {
               </select>
           </div>
         </header>
+
+        <div className="flex border-b border-gray-700 mb-4 flex-shrink-0">
+          {(['graph', 'causal', 'testes'] as const).map(tab => (
+            <button 
+              key={tab} 
+              onClick={() => setMainTab(tab)} 
+              className={`capitalize text-sm font-medium py-2 px-4 border-b-2 transition-colors duration-200 ${mainTab === tab ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-gray-400 hover:text-white'}`}
+            >
+              {t(`${tab}Tab`)}
+            </button>
+          ))}
+        </div>
         
         <div className="flex-grow min-h-0 overflow-y-auto pr-2 -mr-2">
-            <div className="flex border-b border-gray-700 mb-4 sticky top-0 bg-gray-900">
-                { (['generate', 'manual', 'history'] as const).map(tab => (
-                    <button key={tab} onClick={() => setActiveTab(tab)} className={`capitalize text-sm font-medium py-2 px-4 border-b-2 transition-colors duration-200 ${activeTab === tab ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-gray-400 hover:text-white'}`}>
-                        {t(`${tab}Tab`)}
-                    </button>
-                ))}
-            </div>
+          {mainTab === 'graph' && (
+            <>
+              <div className="flex border-b border-gray-700 mb-4 sticky top-0 bg-gray-900">
+                  { (['generate', 'manual', 'history'] as const).map(tab => (
+                      <button key={tab} onClick={() => setActiveTab(tab)} className={`capitalize text-sm font-medium py-2 px-4 border-b-2 transition-colors duration-200 ${activeTab === tab ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-gray-400 hover:text-white'}`}>
+                          {t(`${tab}Tab`)}
+                      </button>
+                  ))}
+              </div>
 
-            <div className="flex-grow flex flex-col min-h-0">
-              {activeTab === 'generate' && (
-                 <div className="flex flex-col gap-4 flex-grow">
-                    <div>
-                      <label htmlFor="model-select" className="text-sm font-medium text-gray-300 mb-2 block">
-                        {t('modelLabel')}
-                      </label>
-                      <select
-                        id="model-select"
-                        value={model}
-                        onChange={(e) => setModel(e.target.value)}
-                        className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200"
-                      >
-                        {GEMINI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label htmlFor="max-concepts-input" className="text-sm font-medium text-gray-300 mb-2 block">
-                        {t('maxConceptsLabel')}
-                      </label>
-                      <input
-                        id="max-concepts-input"
-                        type="number"
-                        value={maxConcepts}
-                        onChange={(e) => setMaxConcepts(Math.max(1, parseInt(e.target.value, 10)) || 1)}
-                        min="1"
-                        className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200"
-                      />
-                    </div>
-                  
-                    <div>
-                        <label htmlFor="file-upload" className="text-sm font-medium text-gray-300 mb-2 block">
-                            {t('uploadLabel')}
-                        </label>
-                        <input type="file" id="file-upload" ref={fileInputRef} onChange={handleFileChange} accept=".pdf,.txt,.md" className="hidden"/>
-                        <button onClick={() => fileInputRef.current?.click()} className="w-full text-sm p-3 bg-gray-800 border border-dashed border-gray-600 rounded-md text-gray-400 hover:bg-gray-700 hover:border-cyan-500 transition duration-200">
-                            {selectedFile ? t('selectedFile', { filename: selectedFile.name }) : t('selectFileButton')}
-                        </button>
-                    </div>
-
-                    <div>
-                        <label htmlFor="prompt-select" className="text-sm font-medium text-gray-300 mb-2 block">
-                            {t('selectPromptLabel')}
+              <div className="flex-grow flex flex-col min-h-0">
+                {activeTab === 'generate' && (
+                   <div className="flex flex-col gap-4 flex-grow">
+                      <div>
+                        <label htmlFor="model-select" className="text-sm font-medium text-gray-300 mb-2 block">
+                          {t('modelLabel')}
                         </label>
                         <select
-                            id="prompt-select"
-                            onChange={(e) => handlePromptSelect(e.target.value)}
-                            defaultValue=""
-                            className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200"
+                          id="model-select"
+                          value={model}
+                          onChange={(e) => setModel(e.target.value)}
+                          className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200"
                         >
-                            <option value="">{t('selectPromptPlaceholder')}</option>
-                            {availablePrompts.map(p => (
-                                <option key={p.id} value={p.id}>{p.title}</option>
-                            ))}
+                          {GEMINI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
                         </select>
-                    </div>
+                      </div>
 
-                    <div className="flex flex-col flex-grow">
-                        <label htmlFor="prompt-input" className="text-sm font-medium text-gray-300 mb-2">
-                            {t('promptLabel')}
+                      <div>
+                        <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer" title={t('flexibleSchemaDescription')}>
+                          <input
+                            type="checkbox"
+                            checked={useFlexibleSchema}
+                            onChange={(e) => setUseFlexibleSchema(e.target.checked)}
+                            className="form-checkbox h-4 w-4 bg-gray-700 border-gray-600 rounded text-cyan-500 focus:ring-cyan-600 transition-colors"
+                          />
+                          {t('flexibleSchemaLabel')}
                         </label>
-                        <textarea id="prompt-input" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder={t('promptPlaceholder')} />
-                    </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="max-concepts-input" className="text-sm font-medium text-gray-300 mb-2 block">
+                          {t('maxConceptsLabel')}
+                        </label>
+                        <input
+                          id="max-concepts-input"
+                          type="number"
+                          value={maxConcepts}
+                          onChange={(e) => setMaxConcepts(Math.max(1, parseInt(e.target.value, 10)) || 1)}
+                          min="1"
+                          className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200"
+                        />
+                      </div>
                     
-                    {isLoading ? (
-                      <button onClick={handleStopGenerating} className="mt-auto w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
-                        {t('stopGeneratingButton')}
+                      <div>
+                          <label htmlFor="file-upload" className="text-sm font-medium text-gray-300 mb-2 block">
+                              {t('uploadLabel')}
+                          </label>
+                          <input type="file" id="file-upload" ref={fileInputRef} onChange={handleFileChange} accept=".pdf,.txt,.md" className="hidden"/>
+                          <button onClick={() => fileInputRef.current?.click()} className="w-full text-sm p-3 bg-gray-800 border border-dashed border-gray-600 rounded-md text-gray-400 hover:bg-gray-700 hover:border-cyan-500 transition duration-200">
+                              {selectedFile ? t('selectedFile', { filename: selectedFile.name }) : t('selectFileButton')}
+                          </button>
+                      </div>
+
+                      <div>
+                          <label htmlFor="prompt-select" className="text-sm font-medium text-gray-300 mb-2 block">
+                              {t('selectPromptLabel')}
+                          </label>
+                          <select
+                              id="prompt-select"
+                              onChange={(e) => handlePromptSelect(e.target.value)}
+                              defaultValue=""
+                              className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200"
+                          >
+                              <option value="">{t('selectPromptPlaceholder')}</option>
+                              {availablePrompts.map(p => (
+                                  <option key={p.id} value={p.id}>{p.title}</option>
+                              ))}
+                          </select>
+                      </div>
+
+                      <div className="flex flex-col flex-grow">
+                          <label htmlFor="prompt-input" className="text-sm font-medium text-gray-300 mb-2">
+                              {t('promptLabel')}
+                          </label>
+                          <textarea id="prompt-input" value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full flex-grow p-3 bg-sky-950/50 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder={t('promptPlaceholder')} />
+                      </div>
+                      
+                      <div>
+                          <label htmlFor="ai-json-output" className="text-sm font-medium text-gray-300 mb-2 block">
+                              {t('jsonOutputLabel')}
+                          </label>
+                          <textarea
+                              id="ai-json-output"
+                              value={aiJsonOutput}
+                              readOnly
+                              placeholder={t('jsonOutputPlaceholder')}
+                              className="w-full h-32 p-3 bg-emerald-950/50 border border-gray-600 rounded-md text-gray-300 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200"
+                          />
+                      </div>
+
+                      {isLoading ? (
+                        <button onClick={handleStopGenerating} className="mt-auto w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                          {t('stopGeneratingButton')}
+                        </button>
+                      ) : (
+                        <button onClick={handleFileGenerate} disabled={!selectedFile || prompt.trim() === ''} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                          {t('generateWithAIButton')}
+                        </button>
+                      )}
+                  </div>
+                )}
+
+                {activeTab === 'manual' && (
+                  <div className="flex flex-col gap-4 flex-grow">
+                      <div className="flex-grow flex flex-col">
+                          <label htmlFor="json-input" className="text-sm font-medium text-gray-300 mb-2">
+                              {t('pasteJsonLabel')}
+                          </label>
+                          <textarea id="json-input" value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder="Enter JSON data..." />
+                      </div>
+                      <button onClick={() => {
+                        const finalJsonString = processJsonAndSetGraph(jsonInput);
+                        if (finalJsonString) {
+                            setJsonInput(finalJsonString);
+                            setAiJsonOutput(finalJsonString);
+                        }
+                      }} disabled={isLoading} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                          {t('generateGraphButton')}
                       </button>
-                    ) : (
-                      <button onClick={handleFileGenerate} disabled={!selectedFile || prompt.trim() === ''} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                        {t('generateWithAIButton')}
-                      </button>
-                    )}
-                </div>
+                  </div>
+                )}
+                  
+                {activeTab === 'history' && (
+                   <div className="flex flex-col gap-2 flex-grow">
+                      {history.length === 0 ? (
+                          <p className="text-gray-500 text-sm text-center mt-4">{t('historyEmpty')}</p>
+                      ) : (
+                          history.map(item => (
+                              <div key={item.id} className="bg-gray-800 p-3 rounded-md border border-gray-700 text-xs">
+                                  <div className="font-bold text-gray-300 truncate">{item.filename}</div>
+                                  <p className="text-gray-400 mt-1 italic truncate">"{item.prompt}"</p>
+                                  <div className="text-gray-500 text-[10px] mt-2">{new Date(item.timestamp).toLocaleString()}</div>
+                                  <div className="flex gap-2 mt-2">
+                                      <button onClick={() => handleSelectHistoryItem(item)} className="flex-1 bg-cyan-700 hover:bg-cyan-600 text-white text-xs py-1 px-2 rounded">{t('historyLoadButton')}</button>
+                                      <button onClick={() => handleDeleteHistoryItem(item.id)} className="bg-red-800 hover:bg-red-700 text-white text-xs py-1 px-2 rounded">{t('historyDeleteButton')}</button>
+                                  </div>
+                              </div>
+                          ))
+                      )}
+                  </div>
+                )}
+              </div>
+
+              {error && <div className="mt-4 p-3 bg-red-800 border border-red-600 text-red-200 rounded-md text-sm whitespace-pre-wrap">{error}</div>}
+
+              {isLoading && (
+                  <div className="mt-4 w-full text-white py-2 px-4 rounded-md flex items-center justify-center">
+                       <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                       </svg>
+                       <span className="text-sm">{loadingMessage ? t(loadingMessage) : t('loadingDefault')}</span>
+                  </div>
               )}
+              
+              <div className="mt-6 pt-4 border-t border-gray-700">
+                  <h2 className="text-sm font-medium text-gray-300 mb-3">{t('layoutDirectionTitle')}</h2>
+                  <div className="grid grid-cols-2 gap-2">
+                      {(Object.keys(LAYOUTS) as Array<keyof typeof LAYOUTS>).map((dir) => (
+                          <button
+                              key={dir}
+                              onClick={() => setLayout(dir)}
+                              className={`py-2 px-3 text-xs font-semibold rounded-md transition-colors duration-200 ${ layout === dir ? 'bg-cyan-500 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300' }`}
+                          >
+                              {t(LAYOUTS[dir])}
+                          </button>
+                      ))}
+                  </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-gray-700">
+                  <h2 className="text-sm font-medium text-gray-300 mb-3">{t('filtersTitle')}</h2>
+                  <div className="flex flex-col gap-4">
+                      <input
+                          type="text"
+                          placeholder={t('filterByLabelPlaceholder')}
+                          value={labelFilter}
+                          onChange={e => setLabelFilter(e.target.value)}
+                          className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors"
+                      />
+                      <input
+                          type="text"
+                          placeholder={t('filterByEdgeLabelPlaceholder')}
+                          value={edgeLabelFilter}
+                          onChange={e => setEdgeLabelFilter(e.target.value)}
+                          className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors"
+                      />
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                          {availableTypes.map(type => (
+                              <label key={type} className="flex items-center gap-2 text-gray-300 cursor-pointer">
+                                  <input
+                                      type="checkbox"
+                                      checked={typeFilters.has(type)}
+                                      onChange={() => handleTypeFilterChange(type)}
+                                      className="form-checkbox h-4 w-4 bg-gray-700 border-gray-600 rounded text-cyan-500 focus:ring-cyan-600 transition-colors"
+                                  />
+                                  <span className="capitalize">{type}</span>
+                              </label>
+                          ))}
+                      </div>
+                       { (labelFilter.trim() !== '' || typeFilters.size > 0 || edgeLabelFilter.trim() !== '') && (
+                          <button
+                              onClick={handleClearFilters}
+                              className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
+                          >
+                              {t('clearFiltersButton')}
+                          </button>
+                       )}
+                  </div>
+              </div>
 
-              {activeTab === 'manual' && (
-                <div className="flex flex-col gap-4 flex-grow">
-                    <div className="flex-grow flex flex-col">
-                        <label htmlFor="json-input" className="text-sm font-medium text-gray-300 mb-2">
-                            {t('pasteJsonLabel')}
-                        </label>
-                        <textarea id="json-input" value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} className="w-full flex-grow p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-xs font-mono focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200" placeholder="Enter JSON data..." />
-                    </div>
-                    <button onClick={() => {
-                      const finalJsonString = processJsonAndSetGraph(jsonInput);
-                      if (finalJsonString) {
-                          setJsonInput(finalJsonString);
-                      }
-                    }} disabled={isLoading} className="mt-auto w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                        {t('generateGraphButton')}
-                    </button>
-                </div>
+              {selectedNodeIdsForActions.length > 0 && (
+                  <div className="mt-6 pt-4 border-t border-gray-700">
+                      <h2 className="text-sm font-medium text-gray-300 mb-3">
+                          {t('bulkActionsTitle', { count: selectedNodeIdsForActions.length })}
+                      </h2>
+                      <div className="flex flex-col gap-2">
+                           <button
+                              onClick={handleCollapseSelectedNodes}
+                              disabled={!canCollapseSelected}
+                              className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
+                          >
+                              {t('collapseSelectedButton')}
+                          </button>
+                          <button
+                              onClick={handleExpandSelectedNodes}
+                              disabled={!canExpandSelected}
+                              className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
+                          >
+                              {t('expandSelectedButton')}
+                          </button>
+                          <button
+                              onClick={handleGroupSelectedNodes}
+                              disabled={selectedNodeIdsForActions.length < 2}
+                              className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
+                          >
+                              {t('groupSelectedButton')}
+                          </button>
+                          <button
+                              onClick={handleDeleteSelectedNodes}
+                              className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-red-800 hover:bg-red-700 text-white transition-colors mt-2"
+                          >
+                              {t('deleteSelectedButton')}
+                          </button>
+                      </div>
+                  </div>
               )}
-                
-              {activeTab === 'history' && (
-                 <div className="flex flex-col gap-2 flex-grow">
-                    {history.length === 0 ? (
-                        <p className="text-gray-500 text-sm text-center mt-4">{t('historyEmpty')}</p>
-                    ) : (
-                        history.map(item => (
-                            <div key={item.id} className="bg-gray-800 p-3 rounded-md border border-gray-700 text-xs">
-                                <div className="font-bold text-gray-300 truncate">{item.filename}</div>
-                                <p className="text-gray-400 mt-1 italic truncate">"{item.prompt}"</p>
-                                <div className="text-gray-500 text-[10px] mt-2">{new Date(item.timestamp).toLocaleString()}</div>
-                                <div className="flex gap-2 mt-2">
-                                    <button onClick={() => handleSelectHistoryItem(item)} className="flex-1 bg-cyan-700 hover:bg-cyan-600 text-white text-xs py-1 px-2 rounded">{t('historyLoadButton')}</button>
-                                    <button onClick={() => handleDeleteHistoryItem(item.id)} className="bg-red-800 hover:bg-red-700 text-white text-xs py-1 px-2 rounded">{t('historyDeleteButton')}</button>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-              )}
-            </div>
-
-            {error && <div className="mt-4 p-3 bg-red-800 border border-red-600 text-red-200 rounded-md text-sm whitespace-pre-wrap">{error}</div>}
-
-            {isLoading && (
-                <div className="mt-4 w-full text-white py-2 px-4 rounded-md flex items-center justify-center">
-                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                     </svg>
-                     <span className="text-sm">{loadingMessage ? t(loadingMessage) : t('loadingDefault')}</span>
-                </div>
-            )}
-            
-            <div className="mt-6 pt-4 border-t border-gray-700">
-                <h2 className="text-sm font-medium text-gray-300 mb-3">{t('layoutDirectionTitle')}</h2>
-                <div className="grid grid-cols-2 gap-2">
-                    {(Object.keys(LAYOUTS) as Array<keyof typeof LAYOUTS>).map((dir) => (
-                        <button
-                            key={dir}
-                            onClick={() => setLayout(dir)}
-                            className={`py-2 px-3 text-xs font-semibold rounded-md transition-colors duration-200 ${ layout === dir ? 'bg-cyan-500 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300' }`}
-                        >
-                            {t(LAYOUTS[dir])}
-                        </button>
-                    ))}
-                </div>
-            </div>
-            
-            <div className="mt-6 pt-4 border-t border-gray-700">
-                <h2 className="text-sm font-medium text-gray-300 mb-3">{t('filtersTitle')}</h2>
-                <div className="flex flex-col gap-4">
-                    <input
-                        type="text"
-                        placeholder={t('filterByLabelPlaceholder')}
-                        value={labelFilter}
-                        onChange={e => setLabelFilter(e.target.value)}
-                        className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors"
-                    />
-                    <input
-                        type="text"
-                        placeholder={t('filterByEdgeLabelPlaceholder')}
-                        value={edgeLabelFilter}
-                        onChange={e => setEdgeLabelFilter(e.target.value)}
-                        className="w-full p-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors"
-                    />
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                        {availableTypes.map(type => (
-                            <label key={type} className="flex items-center gap-2 text-gray-300 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={typeFilters.has(type)}
-                                    onChange={() => handleTypeFilterChange(type)}
-                                    className="form-checkbox h-4 w-4 bg-gray-700 border-gray-600 rounded text-cyan-500 focus:ring-cyan-600 transition-colors"
-                                />
-                                <span className="capitalize">{type}</span>
-                            </label>
-                        ))}
-                    </div>
-                     { (labelFilter.trim() !== '' || typeFilters.size > 0 || edgeLabelFilter.trim() !== '') && (
-                        <button
-                            onClick={handleClearFilters}
-                            className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
-                        >
-                            {t('clearFiltersButton')}
-                        </button>
-                     )}
-                </div>
-            </div>
-
-            {selectedNodeIdsForActions.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-gray-700">
-                    <h2 className="text-sm font-medium text-gray-300 mb-3">
-                        {t('bulkActionsTitle', { count: selectedNodeIdsForActions.length })}
-                    </h2>
-                    <div className="flex flex-col gap-2">
-                         <button
-                            onClick={handleCollapseSelectedNodes}
-                            disabled={!canCollapseSelected}
-                            className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
-                        >
-                            {t('collapseSelectedButton')}
-                        </button>
-                        <button
-                            onClick={handleExpandSelectedNodes}
-                            disabled={!canExpandSelected}
-                            className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
-                        >
-                            {t('expandSelectedButton')}
-                        </button>
-                        <button
-                            onClick={handleGroupSelectedNodes}
-                            disabled={selectedNodeIdsForActions.length < 2}
-                            className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
-                        >
-                            {t('groupSelectedButton')}
-                        </button>
-                        <button
-                            onClick={handleDeleteSelectedNodes}
-                            className="w-full py-2 px-3 text-xs font-semibold rounded-md bg-red-800 hover:bg-red-700 text-white transition-colors mt-2"
-                        >
-                            {t('deleteSelectedButton')}
-                        </button>
-                    </div>
-                </div>
-            )}
+            </>
+          )}
+          {mainTab === 'causal' && <ScaffoldedControlPanel tabName="Causal" />}
+          {mainTab === 'testes' && <ScaffoldedControlPanel tabName="Testes" />}
         </div>
       </div>
       <main className="w-full h-full">

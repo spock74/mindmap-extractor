@@ -1,3 +1,4 @@
+
 // Fix: Use a named import for `z` from `zod` as the library exports it this way.
 import { z } from 'zod';
 import { NODE_TYPE_COLORS } from '../constants';
@@ -114,3 +115,23 @@ export const GraphJsonDataSchema = z.object({
         edges: z.array(GraphEdgeSchema),
     }),
 });
+
+// Schemas for flexible causal event format
+const CajalEntitySchema = z.object({
+  label: z.string(),
+  normalizedLabel: z.string(),
+  ontologyID: z.string().optional(),
+});
+
+export const CajalEventSchema = z.object({
+  hasAgent: CajalEntitySchema,
+  hasAffectedEntity: CajalEntitySchema,
+  hasCausalRelationship: z.string(),
+  relationQualifier: z.enum(['explicitly causal', 'strongly implied causal', 'weakly implied causal', 'correlational']),
+  CausalMechanism: z.string(),
+  hasEvidence: z.string(),
+  confidenceScore: z.number().min(0).max(1),
+  supportingQuote: z.string(),
+});
+
+export const CajalDataSchema = z.array(CajalEventSchema);

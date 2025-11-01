@@ -88,3 +88,24 @@ export interface GraphResult {
 export interface GraphJsonData {
     result: GraphResult;
 }
+
+
+// Types for flexible causal event schema
+export interface CajalEntity {
+  label: string;
+  normalizedLabel: string;
+  ontologyID?: string;
+}
+
+export interface CajalEvent {
+  hasAgent: CajalEntity;
+  hasAffectedEntity: CajalEntity;
+  hasCausalRelationship: string;
+  relationQualifier: 'explicitly causal' | 'strongly implied causal' | 'weakly implied causal' | 'correlational';
+  CausalMechanism: string;
+  hasEvidence: string;
+  confidenceScore: number;
+  supportingQuote: string;
+}
+
+export type CajalData = CajalEvent[];

@@ -61,7 +61,7 @@ Artigo:
     content: `# PROMPT MESTRE PARA EXTRAÇÃO DE GRAFO DE CONHECIMENTO CIENTÍFICO (v5.1)
 
 ## PERSONA
-Você é um Engenheiro de Ontologias e Grafos de Conhecimento. Sua missão é modelar informações complexas de artigo científicos em uma estrutura de grafo JSON hierárquica, semanticamente rica e logicamente coesa, adequada para visualização de dados. O texto de entrada que você receberá foi pré-processado: cada linha é prefixada com um número (ex: "1: ...", "2: ...").
+Você é um Engenheiro de Ontologias e Grafos de Conhecimento. Sua missão é modelar informações complexas de artigo científicos em uma estrutura de grafo JSON hierárquca, semanticamente rica e logicamente coesa, adequada para visualização de dados. O texto de entrada que você receberá foi pré-processado: cada linha é prefixada com um número (ex: "1: ...", "2: ...").
 
 ## TAREFA
 Analise o artigo e modele seu conteúdo em um formato de grafo JSON. Siga rigorosamente os princípios de modelagem ontológicae as regras de formatação abaixo. Especial atenção deve ser dada à fidelidade factual, completude e riqueza semântica e causalidade das relações.
@@ -273,6 +273,58 @@ Artigo:
 
 {TEXTO_DE_ENTRADA}
 `
+  },
+  {
+    id: 'prompt-causal-flexivel',
+    title: 'PROMPT CAUSAL (Saída Flexível)',
+    content: `## Persona
+Você é um assistente de IA especializado, atuando como um consultor sênior e pesquisador na análise de dados, extração semântica e relações de causalidade.
+
+## Missão
+Sua meta é atuar como um especialista em extração de conhecimento biomédico. Suas responsabilidades incluem analisar artigos científicos para extrair relações de causalidade entre entidades. A análise pode ser contida em um único texto ou exigir a identificação de relações entre entidades presentes em textos distintos.
+
+**Domínios de Expertise Essenciais:**
+Você possui domínio profundo em ontologias, modelagem semântica, taxonomia e os fundamentos científicos de áreas da saúde (biomedicina, medicina, psicologia, estatística, saúde pública, epidemiologia).
+
+## Analise o seguinte artigo científico. 
+ {{article_text}}
+ 
+## Seus objetivos específicos são:
+
+1.  **Raciocínio Preliminar (Chain of Thought):** Antes de gerar o JSON, descreva brevemente em texto livre as principais cadeias causais que você identificou no artigo. Isso serve como seu "rascunho" de raciocínio.
+    <!-- A adição de uma etapa de "Chain of Thought" comprovadamente melhora a qualidade do raciocínio em tarefas complexas. -->
+
+2.  **Extração de Eventos Causais (Output JSON):** Identifique todas as instâncias de **cajal:CausalEvent** descritas no texto. Para cada evento, gere um objeto JSON dentro de uma lista, seguindo estritamente a estrutura abaixo:
+
+\`\`\`json
+[
+  {
+    "hasAgent": {
+      "label": "A entidade que exerce a influência causal (ex: Benzodiazepines).",
+      "normalizedLabel": "Um nome canônico e normalizado para a entidade (ex: Benzodiazepine).",
+      "ontologyID": "Se possível, um ID de uma ontologia conhecida (ex: MESH:D001562)."
+    },
+    "hasAffectedEntity": {
+      "label": "A entidade que sofre o efeito (ex: Firing of dopamine neurons).",
+      "normalizedLabel": "Nome canônico (ex: Dopaminergic Neuron Firing Rate).",
+      "ontologyID": "ID de ontologia, se aplicável."
+    },
+    
+    "hasCausalRelationship": "Selecione a relação mais precisa da seguinte lista autorizada: 'cajal:directlyCauses', 'cajal:promotes', 'cajal:increasesLikelihoodOf', 'cajal:prevents', 'cajal:inhibits', 'cajal:decreasesLikelihoodOf'. Se nenhuma se aplicar perfeitamente, use a mais genérica 'cajal:causes'.",
+    
+    "relationQualifier": "Qualifique a certeza da relação com base no texto. Escolha uma das seguintes: 'explicitly causal', 'strongly implied causal', 'weakly implied causal', 'correlational'.",
+
+    "CausalMechanism": "Se o texto descrever o mecanismo biológico, extraia-o aqui. Se não for descrito, preencha com 'Not described'.",
+    
+    "hasEvidence": "Identifique o tipo de evidência mencionada (ex: 'RCT', 'cohort study', 'in vitro experiment', 'knock-in mice experiment').",
+    
+    "confidenceScore": "Sua confiança (Float de 0.0 a 1.0) de que a extração reflete acuradamente as afirmações do artigo.",
+    
+    "supportingQuote": "A frase ou sentença exata do texto que suporta esta extração."
+  }
+]
+\`\`\`
+`
   }
 ];
 
@@ -348,6 +400,8 @@ export const NODE_TYPE_COLORS: Record<string, string> = {
   question: 'bg-pink-800 border-pink-600',
   symptom: 'bg-orange-800 border-orange-600',
   group: 'bg-gray-700/50 border-gray-500 border-dashed',
+  agent: 'bg-sky-800 border-sky-600',
+  affectedEntity: 'bg-teal-800 border-teal-600',
 };
 
 export const NODE_WIDTH = 200;
