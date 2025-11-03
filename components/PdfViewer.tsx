@@ -146,8 +146,6 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ file, highlightText }) => 
           {numPages && Array.from({ length: numPages }, (_, i) => i + 1).map(pageNumber => (
             <div
                 key={pageNumber}
-                // Fix: The `ref` callback should not return a value.
-                // Using a block statement `{ ... }` ensures the arrow function returns `void`.
                 ref={(el) => { pageRefs.current.set(pageNumber, el); }}
                 className="my-4 shadow-lg"
             >
